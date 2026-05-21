@@ -86,6 +86,8 @@
   .score-breakdown{display:flex;flex-direction:column;gap:8px;margin-bottom:32px;text-align:left}
   .score-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-radius:8px;background:var(--card2);font-size:.87rem}
   .score-row .q-label{color:var(--muted)}
+  .score-tally{display:flex;gap:10px;font-size:.82rem}
+  .tally-yes{color:var(--correct)}.tally-no{color:var(--wrong)}
   .tick.yes{color:var(--correct);font-size:1rem}.tick.no{color:var(--wrong);font-size:1rem}
   .btn-restart{background:linear-gradient(135deg,var(--supply),#16a34a);color:#fff;border:none;border-radius:10px;padding:13px 32px;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:600;cursor:pointer;transition:opacity .18s;letter-spacing:.03em}
   .btn-restart:hover{opacity:.85}
@@ -226,8 +228,6 @@
       <div class="score-emoji" id="score-emoji">🎓</div>
       <div class="score-title" id="score-title">Well done!</div>
       <div class="score-subtitle" id="score-sub">Here's how you did.</div>
-      <div class="score-big" id="score-num">0</div>
-      <div class="score-denom">out of 5</div>
       <div class="score-breakdown" id="score-breakdown"></div>
       <button class="btn-restart" onclick="restartQuiz()">↩ Retake Quiz</button>
     </div>
@@ -239,10 +239,12 @@
 // ── State ─────────────────────────────────────────────────────────────────────
 let score = 0;
 let results = [false,false,false,false,false];
+// per-question attempt tracking: [correct, incorrect]
+let qStats = [[0,0],[0,0],[0,0],[0,0],[0,0]];
 
 const Q1_PRICES = [60,70,80,90];
 const Q2_POOL   = [20,30,40,50,60,70,80];
-// Q3/4/5 share a scenario — either a binding ceiling (below 50) or floor (above 50)
+// Q3/4/5 share a scenario — binding ceiling, binding floor, or non-binding (no effect)
 const Q3_SCENARIOS = [
   {type:'ceiling', price:20, traded:20},
   {type:'ceiling', price:30, traded:30},
@@ -250,6 +252,8 @@ const Q3_SCENARIOS = [
   {type:'floor',   price:60, traded:40},
   {type:'floor',   price:70, traded:30},
   {type:'floor',   price:80, traded:20},
+  {type:'ceiling-nb', price:60, traded:50},  // ceiling above eq — no effect
+  {type:'floor-nb',   price:40, traded:50},  // floor below eq — no effect
 ];
 
 let q1Price    = 70;
@@ -339,34 +343,61 @@ function axisTicks(){
   return s;
 }
 
-// ── Draw Q3 (price ceiling or floor) ─────────────────────────────────────────
+// ── Draw Q3 (price ceiling or floor, binding or not) ──────────────────────────
 function drawQ3(scenario){
   const {type,price,traded}=scenario;
   const xT=qx(traded), yP=py(price), xEq=qx(50), yEq=py(50);
-  const col=type==='ceiling'?'#ef4444':'#f97316';
-  document.getElementById('q3-svg').innerHTML = baseChart(`
+  const isCeil=type==='ceiling'||type==='ceiling-nb';
+  const isNB=type==='ceiling-nb'||type==='floor-nb';
+  const col=isCeil?'#ef4444':'#f97316';
+  const labelText=isCeil?'Price Ceiling':'Price Floor';
+  // For binding: show two gray lines — one to supply intersection, one to demand intersection
+  // For non-binding: just show the price line and equilibrium
+  const Qd=100-price, Qs=price;
+  const xDemand=qx(Qd), xSupply=qx(Qs);
+  const extra = isNB ? `
+    ${svgLine(40,yP,260,yP,col,1.5,'6,3')}
+    ${svgText(35,yP+3,''+price,col,8,'end')}
+    ${svgLine(40,yEq,xEq,yEq,'#60a5fa',1,'3,3')}
+    ${svgLine(xEq,175,xEq,yEq,'#60a5fa',1,'3,3')}
+    ${svgText(35,yEq+3,'50','#60a5fa',8,'end')}
+    ${svgText(xEq,190,'Q=50','#60a5fa',8,'middle')}
+    ${svgText(170,yP-7,labelText,col,7.5,'middle')}` : `
     ${svgLine(40,yP,260,yP,col,1.5,'6,3')}
     ${svgText(35,yP+3,''+price,col,8,'end')}
     ${svgLine(40,yEq,xEq,yEq,'#60a5fa',1,'3,3')}
     ${svgText(35,yEq+3,'50','#60a5fa',8,'end')}
-    ${svgLine(xT,175,xT,yP,'#7a90aa',1,'4,3')}
+    ${svgLine(xT,175,xT,py(isCeil?price:100-price),'#34d399',1,'4,3')}
+    ${svgLine(xT,175,xT,py(isCeil?100-price:price),'#f97316',1,'4,3')}
     ${svgLine(xEq,175,xEq,yEq,'#60a5fa',1,'3,3')}
     ${svgText(xT,190,'Q='+traded,'#7a90aa',8,'middle')}
     ${svgText(xEq,190,'Q=50','#60a5fa',8,'middle')}
-    ${svgText(170,yP-7,type==='ceiling'?'Price Ceiling':'Price Floor',col,7.5,'middle')}`);
+    ${svgText(170,yP-7,labelText,col,7.5,'middle')}`;
+  document.getElementById('q3-svg').innerHTML = baseChart(extra);
 }
 
-// ── Draw Q4 (6 labeled dots + axis ticks, NO shading, NO refLines) ────────────
+// ── Draw Q4 (axis ticks + price line + drop lines + dots at all intersections) ──
 function drawQ4(scenario){
   const {type,price,traded}=scenario;
+  const isNB=type==='ceiling-nb'||type==='floor-nb';
 
+  // Price line y-coord
+  const yP=py(price);
+  // Where price line crosses supply (P=Q → Q=price) and demand (P=100-Q → Q=100-price)
+  const xSupplyInt=qx(price);       // supply at price
+  const xDemandInt=qx(100-price);   // demand at price
+  const xEq=qx(50), yEq=py(50);
+
+  // The 3 real DWL triangle points:
+  // A = supply curve at Q=traded
+  // B = demand curve at Q=traded
+  // C = equilibrium
   const real=[
-    {x:qx(traded), y:py(traded)},
-    {x:qx(traded), y:py(100-traded)},
-    {x:qx(50),     y:py(50)}
+    {x:qx(traded), y:py(traded)},       // supply at Q=traded
+    {x:qx(traded), y:py(100-traded)},   // demand at Q=traded
+    {x:qx(50),     y:py(50)}            // equilibrium
   ];
 
-  // Decoy points — on curves but outside the DWL region
   const allDecoys=[
     {x:qx(10), y:py(10)},
     {x:qx(80), y:py(80)},
@@ -376,9 +407,8 @@ function drawQ4(scenario){
     {x:qx(20), y:py(80)},
   ].filter(d=>!real.some(r=>Math.abs(r.x-d.x)<10&&Math.abs(r.y-d.y)<10));
   shuffleArr(allDecoys);
-  const allPts=[...real,...allDecoys.slice(0,3)]; // 3 real + 3 decoys = 6 total
+  const allPts=[...real,...allDecoys.slice(0,3)];
 
-  // Shuffle letter assignment
   const letters=['A','B','C','D','E','F'];
   const idx=[0,1,2,3,4,5];
   for(let i=5;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}
@@ -402,7 +432,33 @@ function drawQ4(scenario){
        <span>Triangle ${opt}</span>
      </div>`).join('');
 
-  // Dots + letters only — no shading, no reference lines
+  // --- Build the reference lines + intersection dots ---
+  // Horizontal dotted price line across the chart
+  // Vertical gray drop lines from where price meets supply and demand down to x-axis
+  const isCeilType=type==='ceiling'||type==='ceiling-nb';
+  const col=isCeilType?'#ef4444':'#f97316';
+
+  let refSVG='';
+  // Dotted price line
+  refSVG+=svgLine(40,yP,260,yP,col,1.2,'5,3');
+  // Dot + label where price meets y-axis
+  refSVG+=svgCircle(40,yP,3,'#7a90aa');
+
+  if(!isNB){
+    // Gray drop line from supply intersection down to x-axis
+    refSVG+=svgLine(xSupplyInt,yP,xSupplyInt,175,'#7a90aa',1,'4,3');
+    // Gray drop line from demand intersection down to x-axis
+    refSVG+=svgLine(xDemandInt,yP,xDemandInt,175,'#7a90aa',1,'4,3');
+    // Dots at supply curve intersection with price line
+    refSVG+=svgCircle(xSupplyInt,yP,3,'#7a90aa');
+    // Dots at demand curve intersection with price line
+    refSVG+=svgCircle(xDemandInt,yP,3,'#7a90aa');
+    // Dots where drop lines meet x-axis
+    refSVG+=svgCircle(xSupplyInt,175,3,'#7a90aa');
+    refSVG+=svgCircle(xDemandInt,175,3,'#7a90aa');
+  }
+
+  // Labeled dots (A–F)
   let dotsSVG='';
   letters.forEach(l=>{
     const pt=ptByLetter[l];
@@ -412,10 +468,12 @@ function drawQ4(scenario){
     dotsSVG+=svgText(pt.x+offX,pt.y+offY,l,'#fbbf24',11,'start',true);
   });
 
-  document.getElementById('q4-svg').innerHTML=baseChart(axisTicks()+dotsSVG);
+  document.getElementById('q4-svg').innerHTML=baseChart(axisTicks()+refSVG+dotsSVG);
 
-  document.getElementById('q4-text').innerHTML=
-    `With the ${type==='ceiling'?'price ceiling':'price floor'} at $${price}, trade falls to ${traded} units. Six points (<strong>A–F</strong>) are marked on the graph. Which three points form the <strong>Deadweight Loss triangle</strong>?`;
+  const policyLabel=isCeilType?'price ceiling':'price floor';
+  document.getElementById('q4-text').innerHTML=isNB
+    ? `The ${policyLabel} at $${price} is non-binding — the market still trades at equilibrium (50 units). Six points (<strong>A–F</strong>) are marked on the graph. Which three points form the <strong>Deadweight Loss triangle</strong>? (Hint: there is none!)`
+    : `With the ${policyLabel} at $${price}, trade falls to ${traded} units. Six points (<strong>A–F</strong>) are marked on the graph. Which three points form the <strong>Deadweight Loss triangle</strong>?`;
 }
 
 function buildWrongCombos(letters, realLetters){
@@ -487,26 +545,42 @@ function updateQ2Text(){
 }
 function updateQ3Text(){
   const {type,price,traded}=q3Scenario;
-  const isCeil=type==='ceiling';
+  const isCeil=type==='ceiling'||type==='ceiling-nb';
+  const isNB=type==='ceiling-nb'||type==='floor-nb';
   const col=isCeil?'var(--wrong)':'var(--demand)';
+  const policyLabel=isCeil?'price ceiling':'price floor';
   const Qd=100-price, Qs=price;
   document.getElementById('q3-text').innerHTML=
-    `The government sets a <strong style="color:${col}">${isCeil?'price ceiling':'price floor'} at $${price}</strong>. What is the actual quantity traded in this market?`;
-  document.getElementById('q3-hint').innerHTML=
-    `💡 A ${isCeil?'price ceiling':'price floor'} is a <em>${isCeil?'maximum':'minimum'}</em> legal price. Plug it into each equation:<br><br>
-     <strong>Demand:</strong> P = 100 − Q<sub>d</sub> → ${price} = 100 − Q<sub>d</sub> → Q<sub>d</sub> = <strong>${Qd}</strong><br>
-     <strong>Supply:</strong> P = Q<sub>s</sub> → Q<sub>s</sub> = <strong>${Qs}</strong><br><br>
-     The actual quantity traded is always the <em>smaller</em> of the two: min(${Qd}, ${Qs}) = <strong>${traded}</strong>.`;
+    `The government sets a <strong style="color:${col}">${policyLabel} at $${price}</strong>. What is the actual quantity traded in this market?`;
+  if(isNB){
+    document.getElementById('q3-hint').innerHTML=
+      `💡 A ${policyLabel} is a <em>${isCeil?'maximum':'minimum'}</em> legal price. The equilibrium price is $50.<br><br>
+       Since $${price} is <em>${isCeil?'above':'below'}</em> the $50 equilibrium, this ${policyLabel} is <strong>non-binding</strong> — it has no effect on the market. Trade continues at the equilibrium quantity of <strong>50</strong>.`;
+  } else {
+    document.getElementById('q3-hint').innerHTML=
+      `💡 A ${policyLabel} is a <em>${isCeil?'maximum':'minimum'}</em> legal price. Plug it into each equation:<br><br>
+       <strong>Demand:</strong> P = 100 − Q<sub>d</sub> → ${price} = 100 − Q<sub>d</sub> → Q<sub>d</sub> = <strong>${Qd}</strong><br>
+       <strong>Supply:</strong> P = Q<sub>s</sub> → Q<sub>s</sub> = <strong>${Qs}</strong><br><br>
+       The actual quantity traded is always the <em>smaller</em> of the two: min(${Qd}, ${Qs}) = <strong>${traded}</strong>.`;
+  }
 }
 function updateQ5Text(){
   const {type,price,traded}=q3Scenario;
+  const isCeilType=type==='ceiling'||type==='ceiling-nb';
+  const isNB=type==='ceiling-nb'||type==='floor-nb';
+  const policyLabel=isCeilType?'price ceiling':'price floor';
   const base=(100-traded)-traded, height=50-traded;
   document.getElementById('q5-text').innerHTML=
-    `Calculate the area of the Deadweight Loss triangle (A–B–C) for the $${price} ${type==='ceiling'?'price ceiling':'price floor'}.`;
-  document.getElementById('q5-hint').innerHTML=
-    `💡 Area = ½ × base × height<br>
-     <strong>Base (A to B)</strong> = price gap at Q=${traded}: $${100-traded} − $${traded} = <strong>$${base}</strong><br>
-     <strong>Height (A/B across to C)</strong> = quantity gap: 50 − ${traded} = <strong>${height} units</strong>`;
+    `Calculate the area of the Deadweight Loss triangle (A–B–C) for the $${price} ${policyLabel}.`;
+  if(isNB){
+    document.getElementById('q5-hint').innerHTML=
+      `💡 The $${price} ${policyLabel} is non-binding — the market is at equilibrium. There is <strong>no deadweight loss</strong>. DWL = <strong>0</strong>.`;
+  } else {
+    document.getElementById('q5-hint').innerHTML=
+      `💡 Area = ½ × base × height<br>
+       <strong>Base (A to B)</strong> = price gap at Q=${traded}: $${100-traded} − $${traded} = <strong>$${base}</strong><br>
+       <strong>Height (A/B across to C)</strong> = quantity gap: 50 − ${traded} = <strong>${height} units</strong>`;
+  }
 }
 
 // ── MC helpers ─────────────────────────────────────────────────────────────────
@@ -568,9 +642,9 @@ function checkQ1(){
   document.getElementById('q1-surp').classList.add(surpOk?'correct':'wrong');
   lockInputs(['q1-qd','q1-qs','q1-surp']);
   document.getElementById('q1-submit').disabled=true;
-  if(allOk){ score++; results[0]=true;
+  if(allOk){ score++; results[0]=true; qStats[0][0]++;
     showFeedback('q1-fb',true,`At P=$${q1Price}, buyers want ${Qd} units (100−${q1Price}) but sellers want to sell ${Qs}. That leaves <strong>${surplus} unsold units</strong> — a surplus.`);
-  } else {
+  } else { qStats[0][1]++;
     showFeedback('q1-fb',false,`Q<sub>d</sub> = 100 − ${q1Price} = <strong>${Qd}</strong>. Q<sub>s</sub> = <strong>${Qs}</strong>. Surplus = ${Qs} − ${Qd} = <strong>${surplus}</strong>.`);
   }
   updateProgress(1); showNext('q1-next'); showRetry('q1-retry');
@@ -601,9 +675,9 @@ function checkQ2(){
   markMCCorrect('q2-mc', correctMC);
   document.getElementById('q2-submit').disabled=true;
   const condWord = isEq ? 'equilibrium (market clears perfectly)' : (isShortage ? 'shortage' : 'surplus');
-  if(allOk){ score++; results[1]=true;
+  if(allOk){ score++; results[1]=true; qStats[1][0]++;
     showFeedback('q2-fb',true,`At P=$${q2Price}: Qd=${Qd}, Qs=${Qs}. Gap = <strong>${gap}</strong> — <strong>${condWord}</strong>.`);
-  } else {
+  } else { qStats[1][1]++;
     showFeedback('q2-fb',false,`Q<sub>d</sub> = 100−${q2Price} = <strong>${Qd}</strong>; Q<sub>s</sub> = <strong>${Qs}</strong>. Gap = <strong>${gap}</strong>. Since $${q2Price} is ${isEq?'exactly at':'${isShortage?"below":"above"} the'} $50 equilibrium, this is a <strong>${condWord}</strong>.`
       .replace('${isShortage?"below":"above"}', isShortage?'below':'above'));
   }
@@ -622,15 +696,26 @@ function checkQ3(){
   const ans=parseInt(document.getElementById('q3-ans').value);
   lockInputs(['q3-ans']);
   document.getElementById('q3-submit').disabled=true;
-  if(ans===traded){ score++; results[2]=true;
+  const isCeilType=type==='ceiling'||type==='ceiling-nb';
+  const isNBType=type==='ceiling-nb'||type==='floor-nb';
+  if(ans===traded){ score++; results[2]=true; qStats[2][0]++;
     document.getElementById('q3-ans').classList.add('correct');
-    showFeedback('q3-fb',true,
-      type==='ceiling'
-        ? `Suppliers produce ${Qs} units but buyers want ${Qd}. Traded = the smaller = <strong>${traded}</strong>.`
-        : `Buyers want only ${Qd} units but sellers offer ${Qs}. Traded = the smaller = <strong>${traded}</strong>.`);
-  } else {
+    let msg;
+    if(isNBType){
+      msg=`The ${isCeilType?'ceiling':'floor'} at $${price} is ${isCeilType?'above':'below'} the $50 equilibrium — it's non-binding. The market trades at the equilibrium quantity: <strong>${traded}</strong>.`;
+    } else if(isCeilType){
+      msg=`Buyers want ${Qd} units but suppliers only produce ${Qs}. Traded = the smaller = <strong>${traded}</strong>.`;
+    } else {
+      msg=`Sellers offer ${Qs} units but buyers only want ${Qd}. Traded = the smaller = <strong>${traded}</strong>.`;
+    }
+    showFeedback('q3-fb',true,msg);
+  } else { qStats[2][1]++;
     document.getElementById('q3-ans').classList.add('wrong');
-    showFeedback('q3-fb',false,`Q<sub>s</sub>=${Qs}, Q<sub>d</sub>=${Qd}. Traded = the smaller = <strong>${traded}</strong>.`);
+    if(isNBType){
+      showFeedback('q3-fb',false,`The ${isCeilType?'ceiling':'floor'} at $${price} is ${isCeilType?'above':'below'} the $50 equilibrium — non-binding. Traded = equilibrium = <strong>${traded}</strong>.`);
+    } else {
+      showFeedback('q3-fb',false,`Q<sub>s</sub>=${Qs}, Q<sub>d</sub>=${Qd}. Traded = the smaller = <strong>${traded}</strong>.`);
+    }
   }
   updateProgress(3); showNext('q3-next'); showRetry('q3-retry');
 }
@@ -648,7 +733,7 @@ function checkQ4(){
   markMCCorrect('q4-mc', q4CorrectCombo);
   document.getElementById('q4-submit').disabled=true;
   const ok=mc===q4CorrectCombo;
-  if(ok){ score++; results[3]=true; }
+  if(ok){ score++; results[3]=true; qStats[3][0]++; } else { qStats[3][1]++; }
   const {traded}=q3Scenario;
   showFeedback('q4-fb',ok,`Triangle <strong>${q4CorrectCombo}</strong> is the DWL. Those three points are: the supply curve at Q=${traded} (P=$${traded}), the demand curve at Q=${traded} (P=$${100-traded}), and the equilibrium (Q=50, P=$50). The other points are decoys.`);
   updateProgress(4); showNext('q4-next'); showRetry('q4-retry');
@@ -668,10 +753,10 @@ function checkQ5(){
   const ans=parseInt(document.getElementById('q5-ans').value);
   lockInputs(['q5-ans']);
   document.getElementById('q5-submit').disabled=true;
-  if(ans===dwl){ score++; results[4]=true;
+  if(ans===dwl){ score++; results[4]=true; qStats[4][0]++;
     document.getElementById('q5-ans').classList.add('correct');
     showFeedback('q5-fb',true,`½ × ${base} × ${height} = <strong>${dwl}</strong>.`);
-  } else {
+  } else { qStats[4][1]++;
     document.getElementById('q5-ans').classList.add('wrong');
     showFeedback('q5-fb',false,`Area = ½ × ${base} × ${height} = <strong>${dwl}</strong>. Base = $${100-traded}−$${traded}=$${base}; height = 50−${traded}=${height}.`);
   }
@@ -698,25 +783,32 @@ function showScore(){
   const scr=document.getElementById('score-screen');
   scr.classList.add('show');
   scr.scrollIntoView({behavior:'smooth',block:'start'});
-  document.getElementById('score-num').textContent=score;
-  const pct=score/5;
+  const totalAttempts=qStats.reduce((s,[c,w])=>s+c+w,0);
+  const totalCorrect=qStats.reduce((s,[c])=>s+c,0);
+  const pct=totalAttempts>0?totalCorrect/totalAttempts:0;
   let emoji='📚',title='Keep studying!',sub='Review the model above and give it another go.';
-  if(pct===1){emoji='🏆';title='Perfect Score!';sub='Outstanding — you\'ve nailed this model.';}
-  else if(pct>=0.8){emoji='🎓';title='Excellent Work!';sub='Strong understanding — nearly perfect!';}
-  else if(pct>=0.6){emoji='👍';title='Good Effort!';sub='A couple of things to review — you\'re close.';}
+  if(score===5){emoji='🏆';title='Perfect Score!';sub='Outstanding — you\'ve nailed this model.';}
+  else if(score>=4){emoji='🎓';title='Excellent Work!';sub='Strong understanding — nearly perfect!';}
+  else if(score>=3){emoji='👍';title='Good Effort!';sub='A couple of things to review — you\'re close.';}
   document.getElementById('score-emoji').textContent=emoji;
   document.getElementById('score-title').textContent=title;
   document.getElementById('score-sub').textContent=sub;
   const {type,price}=q3Scenario;
-  const labels=['Q1 — Surplus at P=$'+q1Price,'Q2 — Market condition at P=$'+q2Price,'Q3 — '+(type==='ceiling'?'Ceiling':'Floor')+' at $'+price+' quantity','Q4 — DWL location','Q5 — DWL area'];
+  const policyShort=(type==='ceiling'||type==='ceiling-nb')?'Ceiling':'Floor';
+  const labels=['Q1 — Surplus at P=$'+q1Price,'Q2 — Market condition at P=$'+q2Price,'Q3 — '+policyShort+' at $'+price+' quantity','Q4 — DWL location','Q5 — DWL area'];
   const bd=document.getElementById('score-breakdown');
   bd.innerHTML='';
-  results.forEach((r,i)=>{
-    bd.innerHTML+=`<div class="score-row"><span class="q-label">${labels[i]}</span><span class="tick ${r?'yes':'no'}">${r?'✓':'✗'}</span></div>`;
+  qStats.forEach(([c,w],i)=>{
+    const total=c+w;
+    const tallyHtml=total===0
+      ? `<span class="score-tally"><span class="tally-yes">—</span></span>`
+      : `<span class="score-tally"><span class="tally-yes">✓ ${c}</span><span class="tally-no">✗ ${w}</span></span>`;
+    bd.innerHTML+=`<div class="score-row"><span class="q-label">${labels[i]}</span>${tallyHtml}</div>`;
   });
 }
 function restartQuiz(){
   score=0; results=[false,false,false,false,false];
+  qStats=[[0,0],[0,0],[0,0],[0,0],[0,0]];
   q1Price=70;
   q2Price=Q2_POOL[Math.floor(Math.random()*Q2_POOL.length)];
   q3Scenario=Q3_SCENARIOS[1];
