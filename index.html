@@ -179,9 +179,7 @@
       <div class="q-text" id="q3-text"></div>
       <div class="q-hint" id="q3-hint"></div>
       <div class="chart-wrap"><svg id="q3-svg" viewBox="0 0 310 215" xmlns="http://www.w3.org/2000/svg"></svg></div>
-      <div class="input-group">
-        <div class="input-row"><span class="input-label">Q traded =</span><input type="number" id="q3-ans" placeholder="?" min="0" max="100"></div>
-      </div>
+      <div class="mc-options" id="q3-mc"></div>
       <button class="btn-submit" id="q3-submit" onclick="checkQ3()">Submit Answer</button>
       <div class="feedback" id="q3-fb"></div>
       <div class="post-answer-btns">
@@ -286,7 +284,7 @@ function baseChart(extra){
   return `
     <line x1="40" y1="175" x2="285" y2="175" stroke="#2a3d57" stroke-width="1.5" marker-end="url(#arr)"/>
     <line x1="40" y1="175" x2="40"  y2="10"  stroke="#2a3d57" stroke-width="1.5" marker-end="url(#arr)"/>
-    ${svgText(162,193,'Quantity','#7a90aa',9,'middle')}
+    ${svgText(162,205,'Quantity','#7a90aa',9,'middle')}
     ${svgText(15,93,'Price ($)','#7a90aa',9,'middle',false,'rotate(-90,15,93)')}
     ${svgLine(40,175,260,20,'#34d399',2)}
     ${svgText(264,18,'S','#34d399',9,'start',true)}
@@ -351,28 +349,42 @@ function drawQ3(scenario){
   const isNB=type==='ceiling-nb'||type==='floor-nb';
   const col=isCeil?'#ef4444':'#f97316';
   const labelText=isCeil?'Price Ceiling':'Price Floor';
-  // For binding: show two gray lines — one to supply intersection, one to demand intersection
-  // For non-binding: just show the price line and equilibrium
   const Qd=100-price, Qs=price;
-  const xDemand=qx(Qd), xSupply=qx(Qs);
-  const extra = isNB ? `
-    ${svgLine(40,yP,260,yP,col,1.5,'6,3')}
-    ${svgText(35,yP+3,''+price,col,8,'end')}
-    ${svgLine(40,yEq,xEq,yEq,'#60a5fa',1,'3,3')}
-    ${svgLine(xEq,175,xEq,yEq,'#60a5fa',1,'3,3')}
-    ${svgText(35,yEq+3,'50','#60a5fa',8,'end')}
-    ${svgText(xEq,190,'Q=50','#60a5fa',8,'middle')}
-    ${svgText(170,yP-7,labelText,col,7.5,'middle')}` : `
-    ${svgLine(40,yP,260,yP,col,1.5,'6,3')}
-    ${svgText(35,yP+3,''+price,col,8,'end')}
-    ${svgLine(40,yEq,xEq,yEq,'#60a5fa',1,'3,3')}
-    ${svgText(35,yEq+3,'50','#60a5fa',8,'end')}
-    ${svgLine(xT,175,xT,py(isCeil?price:100-price),'#34d399',1,'4,3')}
-    ${svgLine(xT,175,xT,py(isCeil?100-price:price),'#f97316',1,'4,3')}
-    ${svgLine(xEq,175,xEq,yEq,'#60a5fa',1,'3,3')}
-    ${svgText(xT,190,'Q='+traded,'#7a90aa',8,'middle')}
-    ${svgText(xEq,190,'Q=50','#60a5fa',8,'middle')}
-    ${svgText(170,yP-7,labelText,col,7.5,'middle')}`;
+  const xDemInt=qx(Qd), xSupInt=qx(Qs);
+
+  let extra='';
+  // Price line + label
+  extra+=svgLine(40,yP,260,yP,col,1.5,'6,3');
+  extra+=svgText(35,yP+3,''+price,col,8,'end');
+  extra+=svgText(170,yP-7,labelText,col,7.5,'middle');
+  // Equilibrium horizontal ref + vertical drop
+  extra+=svgLine(40,yEq,xEq,yEq,'#60a5fa',1,'3,3');
+  extra+=svgText(35,yEq+3,'50','#60a5fa',8,'end');
+  extra+=svgLine(xEq,175,xEq,yEq,'#60a5fa',1,'3,3');
+  extra+=svgText(xEq,190,'Q=50','#60a5fa',8,'middle');
+
+  if(isNB){
+    // Non-binding: show gray drop lines at both intersections with the price line
+    const xLeft=Math.min(xDemInt,xSupInt);
+    const xRight=Math.max(xDemInt,xSupInt);
+    const qLeft=Math.min(Qd,Qs);
+    const qRight=Math.max(Qd,Qs);
+    extra+=svgLine(xLeft,yP,xLeft,175,'#7a90aa',1,'4,3');
+    extra+=svgLine(xRight,yP,xRight,175,'#7a90aa',1,'4,3');
+    extra+=svgText(xLeft,190,'Q='+qLeft,'#7a90aa',8,'middle');
+    extra+=svgText(xRight,190,'Q='+qRight,'#7a90aa',8,'middle');
+  } else {
+    // Binding: two colored lines at traded qty showing the gap, plus gray drop on the other side
+    extra+=svgLine(xT,175,xT,py(isCeil?price:100-price),'#34d399',1,'4,3');
+    extra+=svgLine(xT,175,xT,py(isCeil?100-price:price),'#f97316',1,'4,3');
+    extra+=svgText(xT,190,'Q='+traded,'#7a90aa',8,'middle');
+    // Gray drop line at the other (non-traded) intersection
+    const xOther=isCeil?xDemInt:xSupInt;
+    const qOther=isCeil?Qd:Qs;
+    extra+=svgLine(xOther,yP,xOther,175,'#7a90aa',1,'4,3');
+    extra+=svgText(xOther,190,'Q='+qOther,'#7a90aa',8,'middle');
+  }
+
   document.getElementById('q3-svg').innerHTML = baseChart(extra);
 }
 
@@ -690,27 +702,42 @@ function retryQ2(){
 }
 
 // ── Q3 ────────────────────────────────────────────────────────────────────────
+function buildQ3MC(scenario){
+  const {price,traded}=scenario;
+  const Qs=price, Qd=100-price;
+  const lower=Math.min(Qs,Qd);
+  const higher=Math.max(Qs,Qd);
+  const opts=[lower,50,higher];
+  const badges=['A','B','C'];
+  document.getElementById('q3-mc').innerHTML=opts.map((v,i)=>
+    `<div class="mc-option" onclick="selectMC('q3-mc',this,'${v}')">
+       <span class="mc-badge">${badges[i]}</span>
+       <span>Q = ${v} units${v===50?' (equilibrium)':''}</span>
+     </div>`).join('');
+}
+
 function checkQ3(){
   const {type,price,traded}=q3Scenario;
   const Qd=100-price, Qs=price;
-  const ans=parseInt(document.getElementById('q3-ans').value);
-  lockInputs(['q3-ans']);
+  const sel=getMCSelected('q3-mc');
+  if(!sel) return;
+  const ans=parseInt(sel);
+  lockMC('q3-mc');
+  markMCCorrect('q3-mc', traded.toString());
   document.getElementById('q3-submit').disabled=true;
   const isCeilType=type==='ceiling'||type==='ceiling-nb';
   const isNBType=type==='ceiling-nb'||type==='floor-nb';
   if(ans===traded){ score++; results[2]=true; qStats[2][0]++;
-    document.getElementById('q3-ans').classList.add('correct');
     let msg;
     if(isNBType){
       msg=`The ${isCeilType?'ceiling':'floor'} at $${price} is ${isCeilType?'above':'below'} the $50 equilibrium — it's non-binding. The market trades at the equilibrium quantity: <strong>${traded}</strong>.`;
     } else if(isCeilType){
       msg=`Buyers want ${Qd} units but suppliers only produce ${Qs}. Traded = the smaller = <strong>${traded}</strong>.`;
     } else {
-      msg=`Sellers offer ${Qs} units but buyers only want ${Qd}. Traded = the smaller = <strong>${traded}</strong>.`;
+      msg=`Buyers only want ${Qd} units but sellers offer ${Qs}. Traded = the smaller = <strong>${traded}</strong>.`;
     }
     showFeedback('q3-fb',true,msg);
   } else { qStats[2][1]++;
-    document.getElementById('q3-ans').classList.add('wrong');
     if(isNBType){
       showFeedback('q3-fb',false,`The ${isCeilType?'ceiling':'floor'} at $${price} is ${isCeilType?'above':'below'} the $50 equilibrium — non-binding. Traded = equilibrium = <strong>${traded}</strong>.`);
     } else {
@@ -722,7 +749,7 @@ function checkQ3(){
 function retryQ3(){
   const opts=Q3_SCENARIOS.filter(s=>s.price!==q3Scenario.price);
   q3Scenario=opts[Math.floor(Math.random()*opts.length)];
-  resetCard(3); drawQ3(q3Scenario); updateQ3Text();
+  resetCard(3); drawQ3(q3Scenario); updateQ3Text(); buildQ3MC(q3Scenario);
   drawQ4(q3Scenario); drawQ5(q3Scenario); updateQ5Text();
 }
 
@@ -742,7 +769,7 @@ function retryQ4(){
   const opts=Q3_SCENARIOS.filter(s=>s.price!==q3Scenario.price);
   q3Scenario=opts[Math.floor(Math.random()*opts.length)];
   resetCard(4); drawQ4(q3Scenario);
-  drawQ3(q3Scenario); drawQ5(q3Scenario); updateQ3Text(); updateQ5Text();
+  drawQ3(q3Scenario); buildQ3MC(q3Scenario); drawQ5(q3Scenario); updateQ3Text(); updateQ5Text();
 }
 
 // ── Q5 ────────────────────────────────────────────────────────────────────────
@@ -766,7 +793,7 @@ function retryQ5(){
   const opts=Q3_SCENARIOS.filter(s=>s.price!==q3Scenario.price);
   q3Scenario=opts[Math.floor(Math.random()*opts.length)];
   resetCard(5); drawQ5(q3Scenario); updateQ5Text();
-  drawQ3(q3Scenario); drawQ4(q3Scenario); updateQ3Text();
+  drawQ3(q3Scenario); buildQ3MC(q3Scenario); drawQ4(q3Scenario); updateQ3Text();
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
@@ -830,7 +857,7 @@ function restartQuiz(){
 function initAll(){
   drawQ1(q1Price); updateQ1Text();
   drawQ2(q2Price); updateQ2Text();
-  drawQ3(q3Scenario); updateQ3Text();
+  drawQ3(q3Scenario); updateQ3Text(); buildQ3MC(q3Scenario);
   drawQ4(q3Scenario);
   drawQ5(q3Scenario); updateQ5Text();
 }
