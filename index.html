@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supply & Demand Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1520;
+    --card: #172030;
+    --card2: #1d2a3f;
+    --border: #2a3d57;
+    --supply: #34d399;
+    --supply-dim: #1a4a37;
+    --demand: #f97316;
+    --demand-dim: #4a2a10;
+    --eq: #60a5fa;
+    --eq-dim: #1a2d4a;
+    --text: #e2eaf5;
+    --muted: #7a90aa;
+    --correct: #22c55e;
+    --correct-bg: #0f2d1a;
+    --wrong: #ef4444;
+    --wrong-bg: #2d0f0f;
+    --gold: #fbbf24;
+    --radius: 14px;
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px 64px;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(52,211,153,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 90%, rgba(249,115,22,0.06) 0%, transparent 50%);
+  }
+
+  .container { max-width: 760px; margin: 0 auto; }
+
+  /* HEADER */
+  header { text-align: center; padding: 40px 0 32px; }
+  .subtitle {
+    font-size: 0.78rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--eq);
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2rem, 6vw, 3rem);
+    line-height: 1.1;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  h1 em { font-style: italic; color: var(--supply); }
+  .header-desc { color: var(--muted); font-size: 0.95rem; max-width: 460px; margin: 0 auto; line-height: 1.6; }
+
+  /* REFERENCE CARD */
+  .ref-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-bottom: 28px;
+    box-shadow: var(--shadow);
+  }
+  .ref-card h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.1rem;
+    color: var(--eq);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ref-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .ref-item {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .ref-item .label { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .ref-item .formula { font-size: 0.95rem; font-weight: 500; }
+  .ref-item.demand .formula { color: var(--demand); }
+  .ref-item.supply .formula { color: var(--supply); }
+  .ref-item.eq .formula { color: var(--eq); }
+
+  /* PROGRESS */
+  .progress-bar-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    height: 6px;
+    margin-bottom: 28px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--supply), var(--eq));
+    border-radius: 99px;
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+    width: 0%;
+  }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    font-size: 0.78rem; color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  /* QUESTION CARD */
+  .q-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    animation: slideUp 0.35s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .q-number {
+    font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .q-number::before {
+    content: ''; display: block;
+    width: 20px; height: 2px;
+    background: var(--eq);
+  }
+  .q-text {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.18rem;
+    line-height: 1.5;
+    color: var(--text);
+    margin-bottom: 22px;
+  }
+  .q-hint {
+    background: var(--eq-dim);
+    border-left: 3px solid var(--eq);
+    border-radius: 0 8px 8px 0;
+    padding: 10px 14px;
+    font-size: 0.84rem;
+    color: var(--eq);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  /* INPUTS */
+  .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+  .input-row {
+    display: flex; align-items: center; gap: 10px;
+    flex-wrap: wrap;
+  }
+  .input-label {
+    font-size: 0.82rem; color: var(--muted); min-width: 90px;
+    font-weight: 500;
+  }
+  input[type="number"] {
+    background: var(--card2);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    padding: 9px 14px;
+    width: 110px;
+    transition: border-color 0.2s;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input[type="number"]:focus { outline: none; border-color: var(--eq); }
+  input[type="number"].correct { border-color: var(--correct); background: var(--correct-bg); }
+  input[type="number"].wrong   { border-color: var(--wrong);   background: var(--wrong-bg); }
+
+  /* MULTIPLE CHOICE */
+  .mc-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+  .mc-option {
+    background: var(--card2);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 16px;
+    cursor: pointer;
+    font-size: 0.93rem;
+    line-height: 1.5;
+    transition: border-color 0.18s, background 0.18s;
+    display: flex; align-items: flex-start; gap: 10px;
+    user-select: none;
+  }
+  .mc-option:hover:not(.disabled) { border-color: var(--eq); background: var(--eq-dim); }
+  .mc-option.selected { border-color: var(--eq); background: var(--eq-dim); }
+  .mc-option.correct  { border-color: var(--correct); background: var(--correct-bg); }
+  .mc-option.wrong    { border-color: var(--wrong);   background: var(--wrong-bg); }
+  .mc-option.disabled { cursor: default; }
+  .mc-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 24px; height: 24px;
+    border-radius: 6px;
+    background: var(--border);
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .mc-option.correct .mc-badge  { background: var(--correct); color: #fff; }
+  .mc-option.wrong   .mc-badge  { background: var(--wrong);   color: #fff; }
+  .mc-option.selected .mc-badge { background: var(--eq);      color: #fff; }
+
+  /* SUBMIT BUTTON */
+  .btn-submit {
+    background: linear-gradient(135deg, var(--eq), #3b82f6);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 28px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.18s, transform 0.12s;
+    letter-spacing: 0.03em;
+  }
+  .btn-submit:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+  .btn-submit:disabled { opacity: 0.4; cursor: default; }
+
+  /* FEEDBACK */
+  .feedback {
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-top: 16px;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    display: none;
+  }
+  .feedback.show { display: block; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  .feedback.correct { background: var(--correct-bg); border: 1px solid var(--correct); color: #86efac; }
+  .feedback.wrong   { background: var(--wrong-bg);   border: 1px solid var(--wrong);   color: #fca5a5; }
+  .feedback strong  { font-weight: 600; }
+
+  /* NEXT BUTTON */
+  .btn-next {
+    background: var(--card2);
+    color: var(--text);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 26px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 14px;
+    transition: border-color 0.18s, background 0.18s;
+    display: none;
+  }
+  .btn-next:hover { border-color: var(--eq); background: var(--eq-dim); }
+  .btn-next.show { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* SCORE SCREEN */
+  #score-screen {
+    display: none;
+    animation: slideUp 0.4s cubic-bezier(.4,0,.2,1);
+  }
+  #score-screen.show { display: block; }
+  .score-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px 32px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .score-emoji { font-size: 3.2rem; margin-bottom: 12px; }
+  .score-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .score-subtitle { color: var(--muted); font-size: 0.92rem; margin-bottom: 28px; }
+  .score-big {
+    font-family: 'DM Serif Display', serif;
+    font-size: 5rem;
+    color: var(--gold);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .score-denom { font-size: 1.3rem; color: var(--muted); margin-bottom: 32px; }
+  .score-breakdown {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-bottom: 32px; text-align: left;
+  }
+  .score-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 16px;
+    border-radius: 8px;
+    background: var(--card2);
+    font-size: 0.87rem;
+  }
+  .score-row .q-label { color: var(--muted); }
+  .score-row .tick { font-size: 1rem; }
+  .tick.yes { color: var(--correct); }
+  .tick.no  { color: var(--wrong); }
+  .btn-restart {
+    background: linear-gradient(135deg, var(--supply), #16a34a);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 13px 32px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.18s;
+    letter-spacing: 0.03em;
+  }
+  .btn-restart:hover { opacity: 0.85; }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 28px 0; }
+
+  /* DIAGRAM (SVG chart) */
+  .chart-wrap {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .chart-wrap svg { width: 100%; height: auto; display: block; }
+
+  @media (max-width: 500px) {
+    .q-card { padding: 20px 18px; }
+    .score-card { padding: 28px 18px; }
+    .ref-card { padding: 18px 16px; }
+    .score-big { font-size: 3.5rem; }
+    h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="subtitle">Microeconomics · Module 3</div>
+    <h1>Supply &amp; <em>Demand</em> Quiz</h1>
+    <p class="header-desc">Test your understanding of market equilibrium, price controls, and deadweight loss.</p>
+  </header>
+
+  <!-- REFERENCE CARD -->
+  <div class="ref-card">
+    <h2>📐 Model Reference</h2>
+    <div class="ref-grid">
+      <div class="ref-item demand">
+        <div class="label">Demand Curve</div>
+        <div class="formula">P = 100 − Q<sub style="font-size:0.75em">d</sub></div>
+      </div>
+      <div class="ref-item supply">
+        <div class="label">Supply Curve</div>
+        <div class="formula">P = Q<sub style="font-size:0.75em">s</sub></div>
+      </div>
+      <div class="ref-item eq">
+        <div class="label">Equilibrium</div>
+        <div class="formula">P* = $50 &nbsp;|&nbsp; Q* = 50</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-label">
+    <span id="prog-text">Question 1 of 5</span>
+    <span id="prog-score">Score: 0</span>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progress-fill"></div>
+  </div>
+
+  <!-- QUESTIONS -->
+  <div id="quiz-area">
+
+    <!-- Q1 -->
+    <div class="q-card" id="q1" style="display:none">
+      <div class="q-number">Question 1 of 5</div>
+      <div class="q-text">At a price of <strong style="color:var(--demand)">$70</strong>, what is the quantity demanded (Q<sub>d</sub>), quantity supplied (Q<sub>s</sub>), and the resulting market condition?</div>
+
+      <!-- Simple SVG chart for Q1 -->
+      <div class="chart-wrap">
+        <svg viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="ah1" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#7a90aa"/>
+            </marker>
+          </defs>
+          <!-- Axes -->
+          <line x1="40" y1="170" x2="280" y2="170" stroke="#2a3d57" stroke-width="1.5" marker-end="url(#ah1)"/>
+          <line x1="40" y1="170" x2="40" y2="10" stroke="#2a3d57" stroke-width="1.5" marker-end="url(#ah1)"/>
+          <!-- Labels -->
+          <text x="155" y="190" fill="#7a90aa" font-size="9" text-anchor="middle" font-family="DM Sans,sans-serif">Quantity</text>
+          <text x="16" y="90" fill="#7a90aa" font-size="9" text-anchor="middle" font-family="DM Sans,sans-serif" transform="rotate(-90,16,90)">Price ($)</text>
+          <!-- Supply: P=Q → at Q=0,P=0; at Q=100,P=100. Map: Q→x: 40+Q*2.2; P→y: 170-P*1.6 -->
+          <!-- Supply from (40,170) to (260,10) -->
+          <line x1="40" y1="170" x2="260" y2="10" stroke="#34d399" stroke-width="2" stroke-linecap="round"/>
+          <text x="263" y="12" fill="#34d399" font-size="8" font-family="DM Sans,sans-serif">S</text>
+          <!-- Demand: P=100-Q → at Q=0,P=100; at Q=100,P=0. -->
+          <line x1="40" y1="10" x2="260" y2="170" stroke="#f97316" stroke-width="2" stroke-linecap="round"/>
+          <text x="263" y="173" fill="#f97316" font-size="8" font-family="DM Sans,sans-serif">D</text>
+          <!-- Equilibrium -->
+          <circle cx="150" cy="90" r="4" fill="#60a5fa"/>
+          <!-- Price line at P=70: y = 170-70*1.6=58 -->
+          <line x1="40" y1="58" x2="260" y2="58" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="36" y="61" fill="#fbbf24" font-size="8" text-anchor="end" font-family="DM Sans,sans-serif">70</text>
+          <!-- Qd at P=70: Qd=30 → x=40+30*2.2=106; Qs at P=70: Qs=70 → x=40+70*2.2=194 -->
+          <line x1="106" y1="170" x2="106" y2="58" stroke="#f97316" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="106" y="180" fill="#f97316" font-size="8" text-anchor="middle" font-family="DM Sans,sans-serif">Qd=30</text>
+          <line x1="194" y1="170" x2="194" y2="58" stroke="#34d399" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="194" y="180" fill="#34d399" font-size="8" text-anchor="middle" font-family="DM Sans,sans-serif">Qs=70</text>
+          <!-- Surplus bracket -->
+          <line x1="108" y1="174" x2="192" y2="174" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#ah1)"/>
+          <text x="150" y="169" fill="#fbbf24" font-size="7.5" text-anchor="middle" font-family="DM Sans,sans-serif">Surplus?</text>
+        </svg>
+      </div>
+
+      <div class="input-group" id="q1-inputs">
+        <div class="input-row">
+          <span class="input-label" style="color:var(--demand)">Q<sub>d</sub> =</span>
+          <input type="number" id="q1-qd" placeholder="?" min="0" max="100">
+        </div>
+        <div class="input-row">
+          <span class="input-label" style="color:var(--supply)">Q<sub>s</sub> =</span>
+          <input type="number" id="q1-qs" placeholder="?" min="0" max="100">
+        </div>
+        <div class="input-row">
+          <span class="input-label">Surplus =</span>
+          <input type="number" id="q1-surp" placeholder="?" min="0" max="200">
+        </div>
+      </div>
+      <button class="btn-submit" onclick="checkQ1()">Submit Answer</button>
+      <div class="feedback" id="q1-fb"></div>
+      <button class="btn-next" id="q1-next" onclick="nextQ(2)">Next Question →</button>
+    </div>
+
+    <!-- Q2 -->
+    <div class="q-card" id="q2" style="display:none">
+      <div class="q-number">Question 2 of 5</div>
+      <div class="q-text">At a price of <strong style="color:var(--supply)">$30</strong>, what is Q<sub>d</sub>, Q<sub>s</sub>, the size of the shortage, and the market condition?</div>
+
+      <div class="input-group">
+        <div class="input-row">
+          <span class="input-label" style="color:var(--demand)">Q<sub>d</sub> =</span>
+          <input type="number" id="q2-qd" placeholder="?" min="0" max="100">
+        </div>
+        <div class="input-row">
+          <span class="input-label" style="color:var(--supply)">Q<sub>s</sub> =</span>
+          <input type="number" id="q2-qs" placeholder="?" min="0" max="100">
+        </div>
+        <div class="input-row">
+          <span class="input-label">Shortage =</span>
+          <input type="number" id="q2-short" placeholder="?" min="0" max="200">
+        </div>
+      </div>
+      <div class="mc-options" id="q2-mc">
+        <div class="mc-option" onclick="selectMC('q2-mc',this,'surplus')">
+          <span class="mc-badge">A</span><span>Surplus — sellers have too much unsold stock</span>
+        </div>
+        <div class="mc-option" onclick="selectMC('q2-mc',this,'shortage')">
+          <span class="mc-badge">B</span><span>Shortage — buyers want more than sellers supply</span>
+        </div>
+        <div class="mc-option" onclick="selectMC('q2-mc',this,'eq')">
+          <span class="mc-badge">C</span><span>Equilibrium — market clears perfectly</span>
+        </div>
+      </div>
+      <button class="btn-submit" onclick="checkQ2()">Submit Answer</button>
+      <div class="feedback" id="q2-fb"></div>
+      <button class="btn-next" id="q2-next" onclick="nextQ(3)">Next Question →</button>
+    </div>
+
+    <!-- Q3 -->
+    <div class="q-card" id="q3" style="display:none">
+      <div class="q-number">Question 3 of 5</div>
+      <div class="q-text">The government sets a <strong style="color:var(--demand)">price ceiling at $30</strong>. Given the supply and demand curves, what is the actual quantity traded in this market?</div>
+      <div class="q-hint">💡 A price ceiling is a <em>maximum</em> legal price. The actual quantity traded is always determined by whichever side of the market is the <em>binding constraint</em>.</div>
+      <div class="input-group">
+        <div class="input-row">
+          <span class="input-label">Q traded =</span>
+          <input type="number" id="q3-ans" placeholder="?" min="0" max="100">
+        </div>
+      </div>
+      <button class="btn-submit" onclick="checkQ3()">Submit Answer</button>
+      <div class="feedback" id="q3-fb"></div>
+      <button class="btn-next" id="q3-next" onclick="nextQ(4)">Next Question →</button>
+    </div>
+
+    <!-- Q4 -->
+    <div class="q-card" id="q4" style="display:none">
+      <div class="q-number">Question 4 of 5</div>
+      <div class="q-text">With the price ceiling at $30 restricting trade to <strong>30 units</strong>, where is the Deadweight Loss (DWL) triangle located on the graph?</div>
+
+      <!-- DWL diagram -->
+      <div class="chart-wrap">
+        <svg viewBox="0 0 300 220" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="ah2" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#7a90aa"/>
+            </marker>
+          </defs>
+          <!-- Axes -->
+          <line x1="40" y1="180" x2="280" y2="180" stroke="#2a3d57" stroke-width="1.5" marker-end="url(#ah2)"/>
+          <line x1="40" y1="180" x2="40" y2="10" stroke="#2a3d57" stroke-width="1.5" marker-end="url(#ah2)"/>
+          <text x="155" y="198" fill="#7a90aa" font-size="9" text-anchor="middle" font-family="DM Sans,sans-serif">Quantity</text>
+          <text x="16" y="95" fill="#7a90aa" font-size="9" text-anchor="middle" font-family="DM Sans,sans-serif" transform="rotate(-90,16,95)">Price ($)</text>
+          <!-- Map: Q→x: 40+Q*2; P→y: 180-P*1.6 -->
+          <!-- Supply line: (40,180)→(240,20) [Q=0,P=0 to Q=100,P=100] -->
+          <line x1="40" y1="180" x2="240" y2="20" stroke="#34d399" stroke-width="2"/>
+          <text x="243" y="18" fill="#34d399" font-size="8" font-family="DM Sans,sans-serif">S</text>
+          <!-- Demand line: (40,20)→(240,180) -->
+          <line x1="40" y1="20" x2="240" y2="180" stroke="#f97316" stroke-width="2"/>
+          <text x="243" y="182" fill="#f97316" font-size="8" font-family="DM Sans,sans-serif">D</text>
+          <!-- Equilibrium at Q=50,P=50: x=140,y=100 -->
+          <circle cx="140" cy="100" r="4" fill="#60a5fa"/>
+          <text x="145" y="97" fill="#60a5fa" font-size="7.5" font-family="DM Sans,sans-serif">(50,50)</text>
+          <!-- Q=30 line: x=100 -->
+          <line x1="100" y1="180" x2="100" y2="32" stroke="#7a90aa" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="100" y="192" fill="#7a90aa" font-size="8" text-anchor="middle" font-family="DM Sans,sans-serif">Q=30</text>
+          <!-- At Q=30: Supply P=30 → y=180-30*1.6=132; Demand P=70 → y=180-70*1.6=68 -->
+          <!-- DWL triangle: vertices at (100,132), (100,68), (140,100) -->
+          <polygon points="100,132 100,68 140,100" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="120" y="102" fill="#fbbf24" font-size="8.5" text-anchor="middle" font-family="DM Sans,sans-serif" font-weight="600">DWL</text>
+          <!-- Price ceiling line P=30: y=132 -->
+          <line x1="40" y1="132" x2="100" y2="132" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <text x="36" y="135" fill="#ef4444" font-size="8" text-anchor="end" font-family="DM Sans,sans-serif">30</text>
+          <!-- P=70 marker -->
+          <line x1="40" y1="68" x2="100" y2="68" stroke="#34d399" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="36" y="71" fill="#34d399" font-size="8" text-anchor="end" font-family="DM Sans,sans-serif">70</text>
+          <!-- P=50 marker -->
+          <line x1="40" y1="100" x2="140" y2="100" stroke="#60a5fa" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="36" y="103" fill="#60a5fa" font-size="8" text-anchor="end" font-family="DM Sans,sans-serif">50</text>
+          <!-- Labels for height and base -->
+          <line x1="92" y1="68" x2="92" y2="132" stroke="#fbbf24" stroke-width="1"/>
+          <text x="88" y="102" fill="#fbbf24" font-size="7" text-anchor="end" font-family="DM Sans,sans-serif">h=40</text>
+          <line x1="100" y1="175" x2="140" y2="175" stroke="#fbbf24" stroke-width="1"/>
+          <text x="120" y="173" fill="#fbbf24" font-size="7" text-anchor="middle" font-family="DM Sans,sans-serif">b=20</text>
+        </svg>
+      </div>
+
+      <div class="mc-options" id="q4-mc">
+        <div class="mc-option" onclick="selectMC('q4-mc',this,'A')">
+          <span class="mc-badge">A</span>
+          <span>The rectangle between Q=0 and Q=30, bounded above by the demand curve and below by the supply curve.</span>
+        </div>
+        <div class="mc-option" onclick="selectMC('q4-mc',this,'B')">
+          <span class="mc-badge">B</span>
+          <span>The triangle between Q=30 and Q=50 (the forgone trades), with its apex at the equilibrium point (50, 50) and its base being the gap between the demand and supply prices at Q=30.</span>
+        </div>
+        <div class="mc-option" onclick="selectMC('q4-mc',this,'C')">
+          <span class="mc-badge">C</span>
+          <span>The area above the supply curve and below the demand curve for all quantities from Q=0 to Q=50.</span>
+        </div>
+        <div class="mc-option" onclick="selectMC('q4-mc',this,'D')">
+          <span class="mc-badge">D</span>
+          <span>The rectangle between the ceiling price ($30) and the equilibrium price ($50) for all quantities traded.</span>
+        </div>
+      </div>
+      <button class="btn-submit" onclick="checkQ4()">Submit Answer</button>
+      <div class="feedback" id="q4-fb"></div>
+      <button class="btn-next" id="q4-next" onclick="nextQ(5)">Next Question →</button>
+    </div>
+
+    <!-- Q5 -->
+    <div class="q-card" id="q5" style="display:none">
+      <div class="q-number">Question 5 of 5</div>
+      <div class="q-text">Calculate the area of the Deadweight Loss triangle created by the $30 price ceiling. Enter your answer in square dollars (units²).</div>
+      <div class="q-hint">
+        💡 <strong>Formula:</strong> Area = ½ × base × height<br>
+        <strong>Height</strong> = drop in quantity from equilibrium: Q* − Q<sub>ceiling</sub> = 50 − 30 = <strong>20</strong><br>
+        <strong>Base</strong> = price gap between demand and supply at Q=30: P<sub>demand</sub> − P<sub>supply</sub> = 70 − 30 = <strong>40</strong>
+      </div>
+      <div class="input-group">
+        <div class="input-row">
+          <span class="input-label">DWL Area =</span>
+          <input type="number" id="q5-ans" placeholder="?" min="0" max="9999">
+        </div>
+      </div>
+      <button class="btn-submit" onclick="checkQ5()">Submit Answer</button>
+      <div class="feedback" id="q5-fb"></div>
+      <button class="btn-next" id="q5-next" onclick="showScore()" style="background:linear-gradient(135deg,var(--supply),#16a34a);color:#fff;border-color:var(--supply)">See My Results 🎉</button>
+    </div>
+
+  </div><!-- /quiz-area -->
+
+  <!-- SCORE SCREEN -->
+  <div id="score-screen">
+    <div class="score-card">
+      <div class="score-emoji" id="score-emoji">🎓</div>
+      <div class="score-title" id="score-title">Well done!</div>
+      <div class="score-subtitle" id="score-sub">Here's how you performed on the quiz.</div>
+      <div class="score-big" id="score-num">0</div>
+      <div class="score-denom">out of 5</div>
+      <div class="score-breakdown" id="score-breakdown"></div>
+      <button class="btn-restart" onclick="restartQuiz()">↩ Retake Quiz</button>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+  // ─── State ───────────────────────────────────────────────────────────────────
+  let score = 0;
+  let results = [false, false, false, false, false];
+  let mcSelections = {}; // keyed by mc group id
+
+  // ─── MC selection ─────────────────────────────────────────────────────────────
+  function selectMC(groupId, el, value) {
+    const opts = document.querySelectorAll('#' + groupId + ' .mc-option');
+    opts.forEach(o => { o.classList.remove('selected'); o.dataset.value = ''; });
+    if (!el.classList.contains('disabled')) {
+      el.classList.add('selected');
+      el.dataset.value = value;
+    }
+    document.querySelector('#' + groupId).dataset.selected = value;
+  }
+
+  function getMCSelected(groupId) {
+    return document.querySelector('#' + groupId).dataset.selected || null;
+  }
+
+  function lockMC(groupId) {
+    document.querySelectorAll('#' + groupId + ' .mc-option').forEach(o => o.classList.add('disabled'));
+  }
+
+  function markMCOption(groupId, correctValue) {
+    document.querySelectorAll('#' + groupId + ' .mc-option').forEach(o => {
+      const v = o.dataset.value || o.querySelector('.mc-badge').textContent.trim()
+                 || [...o.querySelectorAll('span')][0].textContent.trim();
+      // Find by matching text badge or selected value
+      const badge = o.querySelector('.mc-badge').textContent.trim();
+      if (badge === correctValue || o.dataset.value === correctValue) {
+        o.classList.add('correct');
+      } else if (o.classList.contains('selected')) {
+        o.classList.add('wrong');
+      }
+    });
+  }
+
+  // ─── Feedback helpers ─────────────────────────────────────────────────────────
+  function showFeedback(id, isCorrect, html) {
+    const el = document.getElementById(id);
+    el.className = 'feedback show ' + (isCorrect ? 'correct' : 'wrong');
+    el.innerHTML = (isCorrect ? '✅ <strong>Correct!</strong> ' : '❌ <strong>Not quite.</strong> ') + html;
+  }
+
+  function showNext(btnId) {
+    document.getElementById(btnId).classList.add('show');
+  }
+
+  function lockInputs(ids) {
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = true;
+    });
+  }
+
+  // ─── Progress update ──────────────────────────────────────────────────────────
+  function updateProgress(qNum) {
+    document.getElementById('prog-text').textContent = 'Question ' + qNum + ' of 5';
+    document.getElementById('prog-score').textContent = 'Score: ' + score;
+    document.getElementById('progress-fill').style.width = ((qNum - 1) / 5 * 100) + '%';
+  }
+
+  // ─── Q1 ───────────────────────────────────────────────────────────────────────
+  function checkQ1() {
+    const qd   = parseInt(document.getElementById('q1-qd').value);
+    const qs   = parseInt(document.getElementById('q1-qs').value);
+    const surp = parseInt(document.getElementById('q1-surp').value);
+
+    const qdOk   = qd   === 30;
+    const qsOk   = qs   === 70;
+    const surpOk = surp === 40;
+
+    const allOk = qdOk && qsOk && surpOk;
+
+    document.getElementById('q1-qd').classList.add(qdOk ? 'correct' : 'wrong');
+    document.getElementById('q1-qs').classList.add(qsOk ? 'correct' : 'wrong');
+    document.getElementById('q1-surp').classList.add(surpOk ? 'correct' : 'wrong');
+
+    lockInputs(['q1-qd','q1-qs','q1-surp']);
+    document.querySelector('#q1 .btn-submit').disabled = true;
+
+    if (allOk) {
+      score++;
+      results[0] = true;
+      showFeedback('q1-fb', true, 'At P=$70: Q<sub>d</sub> = 100 − 70 = <strong>30</strong>, Q<sub>s</sub> = 70. Since Q<sub>s</sub> > Q<sub>d</sub>, there is a <strong>surplus of 40 units</strong>. The above-equilibrium price creates excess supply — sellers can\'t sell all they produce.');
+    } else {
+      showFeedback('q1-fb', false, 'At P=$70: Use Q<sub>d</sub> = 100 − P = 100 − 70 = <strong>30</strong>; and Q<sub>s</sub> = P = <strong>70</strong>. Surplus = Q<sub>s</sub> − Q<sub>d</sub> = 70 − 30 = <strong>40</strong>. Since price is above equilibrium, supply exceeds demand.');
+    }
+    updateProgress(1);
+    showNext('q1-next');
+  }
+
+  // ─── Q2 ───────────────────────────────────────────────────────────────────────
+  function checkQ2() {
+    const qd    = parseInt(document.getElementById('q2-qd').value);
+    const qs    = parseInt(document.getElementById('q2-qs').value);
+    const short = parseInt(document.getElementById('q2-short').value);
+    const mc    = getMCSelected('q2-mc');
+
+    const qdOk    = qd    === 70;
+    const qsOk    = qs    === 30;
+    const shortOk = short === 40;
+    const mcOk    = mc    === 'shortage';
+
+    const allOk = qdOk && qsOk && shortOk && mcOk;
+
+    document.getElementById('q2-qd').classList.add(qdOk ? 'correct' : 'wrong');
+    document.getElementById('q2-qs').classList.add(qsOk ? 'correct' : 'wrong');
+    document.getElementById('q2-short').classList.add(shortOk ? 'correct' : 'wrong');
+
+    lockInputs(['q2-qd','q2-qs','q2-short']);
+    lockMC('q2-mc');
+    markMCOption('q2-mc', 'B');
+    document.querySelector('#q2 .btn-submit').disabled = true;
+
+    if (allOk) {
+      score++;
+      results[1] = true;
+      showFeedback('q2-fb', true, 'At P=$30: Q<sub>d</sub> = 100 − 30 = <strong>70</strong>, Q<sub>s</sub> = 30. The shortage is 70 − 30 = <strong>40 units</strong>. Below equilibrium, demand exceeds supply — a classic <strong>shortage</strong>.');
+    } else {
+      showFeedback('q2-fb', false, 'At P=$30: Q<sub>d</sub> = 100 − 30 = <strong>70</strong>; Q<sub>s</sub> = 30; Shortage = 70 − 30 = <strong>40</strong>. Price below equilibrium → quantity demanded exceeds quantity supplied → <strong>shortage</strong>.');
+    }
+    updateProgress(2);
+    showNext('q2-next');
+  }
+
+  // ─── Q3 ───────────────────────────────────────────────────────────────────────
+  function checkQ3() {
+    const ans = parseInt(document.getElementById('q3-ans').value);
+    lockInputs(['q3-ans']);
+    document.querySelector('#q3 .btn-submit').disabled = true;
+
+    if (ans === 30) {
+      score++;
+      results[2] = true;
+      document.getElementById('q3-ans').classList.add('correct');
+      showFeedback('q3-fb', true, 'The price ceiling of $30 holds the price down. At P=$30, Q<sub>s</sub> = 30 — suppliers only want to produce 30 units. Since quantity traded = min(Q<sub>d</sub>, Q<sub>s</sub>) = min(70, 30) = <strong>30</strong>, the market is supply-constrained.');
+    } else {
+      document.getElementById('q3-ans').classList.add('wrong');
+      showFeedback('q3-fb', false, 'With a binding price ceiling, trade is limited by the <em>short side</em> of the market. At P=$30, Q<sub>s</sub>=30 and Q<sub>d</sub>=70. The actual quantity traded = <strong>30</strong> (determined by sellers, the binding side).');
+    }
+    updateProgress(3);
+    showNext('q3-next');
+  }
+
+  // ─── Q4 ───────────────────────────────────────────────────────────────────────
+  function checkQ4() {
+    const mc = getMCSelected('q4-mc');
+    lockMC('q4-mc');
+    document.querySelector('#q4 .btn-submit').disabled = true;
+
+    const correct = mc === 'B';
+    if (correct) {
+      score++;
+      results[3] = true;
+    }
+    markMCOption('q4-mc', 'B');
+    showFeedback('q4-fb', correct, 'The DWL triangle sits between <strong>Q=30 and Q=50</strong> — these are the trades that <em>would have</em> occurred at equilibrium but are blocked by the ceiling. Its three vertices are: the point on the supply curve at Q=30 (P=30), the point on the demand curve at Q=30 (P=70), and the equilibrium point (Q=50, P=50). This triangle captures the lost gains from trade.');
+    updateProgress(4);
+    showNext('q4-next');
+  }
+
+  // ─── Q5 ───────────────────────────────────────────────────────────────────────
+  function checkQ5() {
+    const ans = parseInt(document.getElementById('q5-ans').value);
+    lockInputs(['q5-ans']);
+    document.querySelector('#q5 .btn-submit').disabled = true;
+
+    if (ans === 400) {
+      score++;
+      results[4] = true;
+      document.getElementById('q5-ans').classList.add('correct');
+      showFeedback('q5-fb', true, 'DWL = ½ × base × height = ½ × <strong>40</strong> × <strong>20</strong> = <strong>400</strong>. The base is the price gap between demand and supply at Q=30 (P<sub>d</sub>=70, P<sub>s</sub>=30 → gap=40), and the height is the quantity lost from equilibrium (50−30=20).');
+    } else {
+      document.getElementById('q5-ans').classList.add('wrong');
+      showFeedback('q5-fb', false, 'DWL = ½ × base × height. Base = price gap at Q=30 = P<sub>demand</sub> − P<sub>supply</sub> = 70 − 30 = <strong>40</strong>. Height = quantity gap = 50 − 30 = <strong>20</strong>. So DWL = ½ × 40 × 20 = <strong>400</strong>.');
+    }
+    updateProgress(5);
+    showNext('q5-next');
+  }
+
+  // ─── Navigation ───────────────────────────────────────────────────────────────
+  function nextQ(num) {
+    // Hide all q-cards
+    document.querySelectorAll('.q-card').forEach(c => c.style.display = 'none');
+    const next = document.getElementById('q' + num);
+    if (next) {
+      next.style.display = 'block';
+      next.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      updateProgress(num);
+    }
+  }
+
+  function showScore() {
+    document.querySelectorAll('.q-card').forEach(c => c.style.display = 'none');
+    document.getElementById('progress-fill').style.width = '100%';
+    document.getElementById('prog-text').textContent = 'Complete!';
+    document.getElementById('prog-score').textContent = 'Score: ' + score;
+
+    const screen = document.getElementById('score-screen');
+    screen.classList.add('show');
+    screen.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    document.getElementById('score-num').textContent = score;
+
+    const pct = score / 5;
+    let emoji = '📚', title = 'Keep studying!', sub = 'Review the model reference above and try again.';
+    if (pct === 1)      { emoji='🏆'; title='Perfect Score!'; sub='Outstanding — you\'ve mastered this model.'; }
+    else if (pct >= 0.8){ emoji='🎓'; title='Excellent Work!'; sub='You have a strong command of the material.'; }
+    else if (pct >= 0.6){ emoji='👍'; title='Good Effort!'; sub='A few things to review — you\'re almost there.'; }
+
+    document.getElementById('score-emoji').textContent = emoji;
+    document.getElementById('score-title').textContent = title;
+    document.getElementById('score-sub').textContent = sub;
+
+    const qLabels = [
+      'Q1 — Surplus at P=$70',
+      'Q2 — Shortage at P=$30',
+      'Q3 — Price ceiling quantity',
+      'Q4 — DWL location',
+      'Q5 — DWL area calculation',
+    ];
+    const breakdown = document.getElementById('score-breakdown');
+    breakdown.innerHTML = '';
+    results.forEach((r, i) => {
+      breakdown.innerHTML += `
+        <div class="score-row">
+          <span class="q-label">${qLabels[i]}</span>
+          <span class="tick ${r ? 'yes' : 'no'}">${r ? '✓' : '✗'}</span>
+        </div>`;
+    });
+  }
+
+  // ─── Restart ──────────────────────────────────────────────────────────────────
+  function restartQuiz() {
+    score = 0;
+    results = [false, false, false, false, false];
+    mcSelections = {};
+
+    // Reset all inputs
+    document.querySelectorAll('input[type="number"]').forEach(i => {
+      i.value = ''; i.disabled = false;
+      i.classList.remove('correct','wrong');
+    });
+    document.querySelectorAll('.mc-option').forEach(o => {
+      o.classList.remove('selected','correct','wrong','disabled');
+      delete o.dataset.value;
+    });
+    document.querySelectorAll('[id$="-mc"]').forEach(g => delete g.dataset.selected);
+    document.querySelectorAll('.feedback').forEach(f => f.className = 'feedback');
+    document.querySelectorAll('.btn-submit').forEach(b => b.disabled = false);
+    document.querySelectorAll('.btn-next').forEach(b => b.classList.remove('show'));
+
+    document.getElementById('score-screen').classList.remove('show');
+    document.getElementById('prog-score').textContent = 'Score: 0';
+
+    // Show Q1
+    document.querySelectorAll('.q-card').forEach(c => c.style.display = 'none');
+    document.getElementById('q1').style.display = 'block';
+    updateProgress(1);
+    document.getElementById('progress-fill').style.width = '0%';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ─── Init: show Q1 ────────────────────────────────────────────────────────────
+  document.getElementById('q1').style.display = 'block';
+  updateProgress(1);
+</script>
+</body>
+</html>
