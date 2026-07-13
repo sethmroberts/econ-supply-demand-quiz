@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supply & Demand Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f1520;--card:#172030;--card2:#1d2a3f;--border:#2a3d57;
+    --supply:#34d399;--supply-dim:#1a4a37;--demand:#f97316;--demand-dim:#4a2a10;
+    --eq:#60a5fa;--eq-dim:#1a2d4a;--text:#e2eaf5;--muted:#7a90aa;
+    --correct:#22c55e;--correct-bg:#0f2d1a;--wrong:#ef4444;--wrong-bg:#2d0f0f;
+    --gold:#fbbf24;--radius:14px;--shadow:0 8px 32px rgba(0,0,0,.4);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;
+    padding:24px 16px 64px;
+    background-image:radial-gradient(ellipse at 20% 10%,rgba(52,211,153,.06) 0%,transparent 50%),
+                     radial-gradient(ellipse at 80% 90%,rgba(249,115,22,.06) 0%,transparent 50%)}
+  .container{max-width:760px;margin:0 auto}
+  header{text-align:center;padding:40px 0 32px}
+  .subtitle{font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:var(--eq);font-weight:600;margin-bottom:12px}
+  h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,6vw,3rem);line-height:1.1;color:var(--text);margin-bottom:10px}
+  .header-desc{color:var(--muted);font-size:.95rem;max-width:460px;margin:0 auto;line-height:1.6}
+  .ref-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;margin-bottom:28px;box-shadow:var(--shadow)}
+  .ref-card h2{font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--eq);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .ref-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+  .ref-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .ref-item .label{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .ref-item .formula{font-size:.95rem;font-weight:500}
+  .ref-item.demand .formula{color:var(--demand)}.ref-item.supply .formula{color:var(--supply)}.ref-item.eq .formula{color:var(--eq)}
+  .progress-bar-wrap{background:var(--card);border:1px solid var(--border);border-radius:99px;height:6px;margin-bottom:28px;overflow:hidden}
+  .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--supply),var(--eq));border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1);width:0%}
+  .progress-label{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-bottom:8px}
+  .q-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px;box-shadow:var(--shadow);animation:slideUp .35s cubic-bezier(.4,0,.2,1)}
+  @keyframes slideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+  .q-number{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .q-number::before{content:'';display:block;width:20px;height:2px;background:var(--eq)}
+  .q-text{font-family:'DM Serif Display',serif;font-size:1.18rem;line-height:1.5;color:var(--text);margin-bottom:22px}
+  .q-hint{background:var(--eq-dim);border-left:3px solid var(--eq);border-radius:0 8px 8px 0;padding:10px 14px;font-size:.84rem;color:var(--eq);margin-bottom:20px;line-height:1.6}
+  .q-hint strong{font-weight:600}
+  .input-group{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+  .input-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .input-label{font-size:.82rem;color:var(--muted);min-width:140px;font-weight:500}
+  input[type=number]{background:var(--card2);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.95rem;padding:9px 14px;width:110px;transition:border-color .2s;-moz-appearance:textfield}
+  input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+  input[type=number]:focus{outline:none;border-color:var(--eq)}
+  input[type=number].correct{border-color:var(--correct);background:var(--correct-bg)}
+  input[type=number].wrong{border-color:var(--wrong);background:var(--wrong-bg)}
+  .mc-options{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+  .mc-option{background:var(--card2);border:1.5px solid var(--border);border-radius:10px;padding:13px 16px;cursor:pointer;font-size:.93rem;line-height:1.5;transition:border-color .18s,background .18s;display:flex;align-items:flex-start;gap:10px;user-select:none}
+  .mc-option:hover:not(.disabled){border-color:var(--eq);background:var(--eq-dim)}
+  .mc-option.selected{border-color:var(--eq);background:var(--eq-dim)}
+  .mc-option.correct{border-color:var(--correct);background:var(--correct-bg)}
+  .mc-option.wrong{border-color:var(--wrong);background:var(--wrong-bg)}
+  .mc-option.disabled{cursor:default}
+  .mc-badge{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;border-radius:6px;background:var(--border);font-size:.72rem;font-weight:600;letter-spacing:.05em;flex-shrink:0;margin-top:1px}
+  .mc-option.correct .mc-badge{background:var(--correct);color:#fff}
+  .mc-option.wrong   .mc-badge{background:var(--wrong);color:#fff}
+  .mc-option.selected .mc-badge{background:var(--eq);color:#fff}
+  .btn-submit{background:linear-gradient(135deg,var(--eq),#3b82f6);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:600;cursor:pointer;transition:opacity .18s,transform .12s;letter-spacing:.03em}
+  .btn-submit:hover:not(:disabled){opacity:.88;transform:translateY(-1px)}
+  .btn-submit:disabled{opacity:.4;cursor:default}
+  .btn-next{background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:10px;padding:11px 26px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:500;cursor:pointer;margin-top:14px;transition:border-color .18s,background .18s;display:none}
+  .btn-next:hover{border-color:var(--eq);background:var(--eq-dim)}
+  .btn-next.show{display:inline-flex;align-items:center;gap:6px}
+  .btn-retry{background:var(--card2);color:var(--supply);border:1.5px solid var(--supply-dim);border-radius:10px;padding:11px 26px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:500;cursor:pointer;margin-top:14px;margin-left:8px;transition:border-color .18s,background .18s;display:none}
+  .btn-retry:hover{border-color:var(--supply);background:var(--supply-dim)}
+  .btn-retry.show{display:inline-flex;align-items:center;gap:6px}
+  .post-answer-btns{display:flex;flex-wrap:wrap;gap:0}
+  .feedback{border-radius:10px;padding:14px 18px;margin-top:16px;font-size:.9rem;line-height:1.65;display:none}
+  .feedback.show{display:block;animation:fadeIn .25s ease}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .feedback.correct{background:var(--correct-bg);border:1px solid var(--correct);color:#86efac}
+  .feedback.wrong{background:var(--wrong-bg);border:1px solid var(--wrong);color:#fca5a5}
+  .feedback strong{font-weight:600}
+  #score-screen{display:none;animation:slideUp .4s cubic-bezier(.4,0,.2,1)}
+  #score-screen.show{display:block}
+  .score-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:40px 32px;text-align:center;box-shadow:var(--shadow)}
+  .score-emoji{font-size:3.2rem;margin-bottom:12px}
+  .score-title{font-family:'DM Serif Display',serif;font-size:2rem;color:var(--text);margin-bottom:6px}
+  .score-subtitle{color:var(--muted);font-size:.92rem;margin-bottom:28px}
+  .score-big{font-family:'DM Serif Display',serif;font-size:5rem;color:var(--gold);line-height:1;margin-bottom:6px}
+  .score-denom{font-size:1.3rem;color:var(--muted);margin-bottom:32px}
+  .score-breakdown{display:flex;flex-direction:column;gap:8px;margin-bottom:32px;text-align:left}
+  .score-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-radius:8px;background:var(--card2);font-size:.87rem}
+  .score-row .q-label{color:var(--muted)}
+  .score-tally{display:flex;gap:10px;font-size:.82rem}
+  .tally-yes{color:var(--correct)}.tally-no{color:var(--wrong)}
+  .tick.yes{color:var(--correct);font-size:1rem}.tick.no{color:var(--wrong);font-size:1rem}
+  .btn-restart{background:linear-gradient(135deg,var(--supply),#16a34a);color:#fff;border:none;border-radius:10px;padding:13px 32px;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:600;cursor:pointer;transition:opacity .18s;letter-spacing:.03em}
+  .btn-restart:hover{opacity:.85}
+  .chart-wrap{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:20px}
+  .chart-wrap svg{width:100%;height:auto;display:block}
+  @media(max-width:500px){.q-card{padding:20px 18px}.score-card{padding:28px 18px}.ref-card{padding:18px 16px}.score-big{font-size:3.5rem}h1{font-size:1.8rem}}
+</style>
+</head>
+<body>
+
+<div style="max-width:760px;margin:0 auto;padding:16px 16px 0">
+  <a href="index.html" style="display:inline-flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;font-size:.82rem;color:#7a90aa;text-decoration:none;font-weight:500;transition:color .15s" onmouseover="this.style.color='#60a5fa'" onmouseout="this.style.color='#7a90aa'">← Back to Resources</a>
+</div>
+
+<svg width="0" height="0" style="position:absolute;pointer-events:none">
+  <defs>
+    <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#2a3d57"/>
+    </marker>
+  </defs>
+</svg>
+
+<div class="container">
+
+  <header>
+    <div class="subtitle">Microeconomics</div>
+    <!-- Supply=green, & Quiz=white, Demand=orange -->
+    <h1><span style="color:var(--supply)">Supply</span> &amp; <span style="color:var(--demand)">Demand</span> Quiz</h1>
+    <p class="header-desc">Test your understanding of market equilibrium, price controls, and deadweight loss.</p>
+  </header>
+
+  <div class="ref-card">
+    <h2>📐 Model Reference</h2>
+    <div class="ref-grid">
+      <div class="ref-item demand"><div class="label">Demand Curve</div><div class="formula">P = 100 − Q<sub style="font-size:.75em">d</sub></div></div>
+      <div class="ref-item supply"><div class="label">Supply Curve</div><div class="formula">P = Q<sub style="font-size:.75em">s</sub></div></div>
+      <div class="ref-item eq"><div class="label">Equilibrium</div><div class="formula">P* = $50 &nbsp;|&nbsp; Q* = 50</div></div>
+    </div>
+  </div>
+
+  <div class="progress-label">
+    <span id="prog-text">Question 1 of 5</span>
+    <span id="prog-score">Score: 0</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill"></div></div>
+
+  <div id="quiz-area">
+
+    <!-- Q1 -->
+    <div class="q-card" id="q1" style="display:none">
+      <div class="q-number">Question 1 of 5</div>
+      <div class="q-text" id="q1-text"></div>
+      <div class="chart-wrap"><svg id="q1-svg" viewBox="0 0 310 215" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="input-group">
+        <div class="input-row"><span class="input-label" style="color:var(--demand)">Q<sub>d</sub> =</span><input type="number" id="q1-qd" placeholder="?" min="0" max="100"></div>
+        <div class="input-row"><span class="input-label" style="color:var(--supply)">Q<sub>s</sub> =</span><input type="number" id="q1-qs" placeholder="?" min="0" max="100"></div>
+        <div class="input-row"><span class="input-label">Surplus =</span><input type="number" id="q1-surp" placeholder="?" min="0" max="200"></div>
+      </div>
+      <button class="btn-submit" id="q1-submit" onclick="checkQ1()">Submit Answer</button>
+      <div class="feedback" id="q1-fb"></div>
+      <div class="post-answer-btns">
+        <button class="btn-next" id="q1-next" onclick="nextQ(2)">Next Question →</button>
+        <button class="btn-retry" id="q1-retry" onclick="retryQ1()">↺ Try a similar problem</button>
+      </div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="q-card" id="q2" style="display:none">
+      <div class="q-number">Question 2 of 5</div>
+      <div class="q-text" id="q2-text"></div>
+      <div class="chart-wrap"><svg id="q2-svg" viewBox="0 0 310 215" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="input-group">
+        <div class="input-row"><span class="input-label" style="color:var(--demand)">Q<sub>d</sub> =</span><input type="number" id="q2-qd" placeholder="?" min="0" max="100"></div>
+        <div class="input-row"><span class="input-label" style="color:var(--supply)">Q<sub>s</sub> =</span><input type="number" id="q2-qs" placeholder="?" min="0" max="100"></div>
+        <div class="input-row"><span class="input-label">Shortage or Surplus =</span><input type="number" id="q2-gap" placeholder="?" min="0" max="200"></div>
+      </div>
+      <div class="mc-options" id="q2-mc">
+        <div class="mc-option" onclick="selectMC('q2-mc',this,'surplus')"><span class="mc-badge">A</span><span>Surplus — sellers have more than buyers want</span></div>
+        <div class="mc-option" onclick="selectMC('q2-mc',this,'shortage')"><span class="mc-badge">B</span><span>Shortage — buyers want more than sellers offer</span></div>
+        <div class="mc-option" onclick="selectMC('q2-mc',this,'eq')"><span class="mc-badge">C</span><span>Equilibrium — the market clears perfectly</span></div>
+      </div>
+      <button class="btn-submit" id="q2-submit" onclick="checkQ2()">Submit Answer</button>
+      <div class="feedback" id="q2-fb"></div>
+      <div class="post-answer-btns">
+        <button class="btn-next" id="q2-next" onclick="nextQ(3)">Next Question →</button>
+        <button class="btn-retry" id="q2-retry" onclick="retryQ2()">↺ Try a similar problem</button>
+      </div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="q-card" id="q3" style="display:none">
+      <div class="q-number">Question 3 of 5</div>
+      <div class="q-text" id="q3-text"></div>
+      <div class="q-hint" id="q3-hint"></div>
+      <div class="chart-wrap"><svg id="q3-svg" viewBox="0 0 310 215" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="mc-options" id="q3-mc"></div>
+      <button class="btn-submit" id="q3-submit" onclick="checkQ3()">Submit Answer</button>
+      <div class="feedback" id="q3-fb"></div>
+      <div class="post-answer-btns">
+        <button class="btn-next" id="q3-next" onclick="nextQ(4)">Next Question →</button>
+        <button class="btn-retry" id="q3-retry" onclick="retryQ3()">↺ Try a similar problem</button>
+      </div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="q-card" id="q4" style="display:none">
+      <div class="q-number">Question 4 of 5</div>
+      <div class="q-text" id="q4-text"></div>
+      <div class="chart-wrap"><svg id="q4-svg" viewBox="0 0 310 215" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="mc-options" id="q4-mc"></div>
+      <button class="btn-submit" id="q4-submit" onclick="checkQ4()">Submit Answer</button>
+      <div class="feedback" id="q4-fb"></div>
+      <div class="post-answer-btns">
+        <button class="btn-next" id="q4-next" onclick="nextQ(5)">Next Question →</button>
+        <button class="btn-retry" id="q4-retry" onclick="retryQ4()">↺ Try a similar problem</button>
+      </div>
+    </div>
+
+    <!-- Q5 -->
+    <div class="q-card" id="q5" style="display:none">
+      <div class="q-number">Question 5 of 5</div>
+      <div class="q-text" id="q5-text"></div>
+      <div class="q-hint" id="q5-hint"></div>
+      <div class="chart-wrap"><svg id="q5-svg" viewBox="0 0 310 215" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="input-group">
+        <div class="input-row"><span class="input-label">DWL Area =</span><input type="number" id="q5-ans" placeholder="?" min="0" max="99999"></div>
+      </div>
+      <button class="btn-submit" id="q5-submit" onclick="checkQ5()">Submit Answer</button>
+      <div class="feedback" id="q5-fb"></div>
+      <div class="post-answer-btns">
+        <button class="btn-next" id="q5-next" onclick="showScore()" style="background:linear-gradient(135deg,var(--supply),#16a34a);color:#fff;border-color:var(--supply)">See My Results 🎉</button>
+        <button class="btn-retry" id="q5-retry" onclick="retryQ5()">↺ Try a similar problem</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="score-screen">
+    <div class="score-card">
+      <div class="score-emoji" id="score-emoji">🎓</div>
+      <div class="score-title" id="score-title">Well done!</div>
+      <div class="score-subtitle" id="score-sub">Here's how you did.</div>
+      <div class="score-breakdown" id="score-breakdown"></div>
+      <button class="btn-restart" onclick="restartQuiz()">↩ Retake Quiz</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let score = 0;
+let results = [false,false,false,false,false];
+// per-question attempt tracking: [correct, incorrect]
+let qStats = [[0,0],[0,0],[0,0],[0,0],[0,0]];
+
+const Q1_PRICES = [60,70,80,90];
+const Q2_POOL   = [20,30,40,50,60,70,80];
+// Q3/4/5 share a scenario — binding ceiling, binding floor, or non-binding (no effect)
+const Q3_SCENARIOS = [
+  {type:'ceiling', price:20, traded:20},
+  {type:'ceiling', price:30, traded:30},
+  {type:'ceiling', price:40, traded:40},
+  {type:'floor',   price:60, traded:40},
+  {type:'floor',   price:70, traded:30},
+  {type:'floor',   price:80, traded:20},
+  {type:'ceiling-nb', price:60, traded:50},  // ceiling above eq — no effect
+  {type:'floor-nb',   price:40, traded:50},  // floor below eq — no effect
+];
+
+let q1Price    = 70;
+let q2Price    = Q2_POOL[Math.floor(Math.random()*Q2_POOL.length)];
+let q3Scenario = Q3_SCENARIOS[1]; // default: ceiling at $30
+
+let q4CorrectCombo = '';
+let q4AllOptions   = [];
+
+// ── Coord mapping: viewBox 310×215 ────────────────────────────────────────────
+// Q→x = 40+Q*2.2  (Q=0→40, Q=100→260)
+// P→y = 175-P*1.55  (P=0→175, P=100→20, P=50→97.5)
+function qx(q){ return 40+q*2.2; }
+function py(p){ return 175-p*1.55; }
+
+// ── SVG helpers ───────────────────────────────────────────────────────────────
+function svgLine(x1,y1,x2,y2,stroke,sw,dash){
+  return `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="${stroke}" stroke-width="${sw}"${dash?' stroke-dasharray="'+dash+'"':''} stroke-linecap="round"/>`;
+}
+function svgText(x,y,txt,fill,size,anchor,bold,transform){
+  return `<text x="${f(x)}" y="${f(y)}" fill="${fill}" font-size="${size}" text-anchor="${anchor||'start'}" font-family="DM Sans,sans-serif"${bold?' font-weight="600"':''}${transform?' transform="'+transform+'"':''}>${txt}</text>`;
+}
+function svgCircle(cx,cy,r,fill,stroke,sw){
+  return `<circle cx="${f(cx)}" cy="${f(cy)}" r="${r}" fill="${fill}"${stroke?` stroke="${stroke}" stroke-width="${sw}"`:''} />`;
+}
+function f(n){ return Math.round(n*10)/10; }
+
+// Base: axes + S/D lines + equilibrium dot (unlabeled)
+function baseChart(extra){
+  return `
+    <line x1="40" y1="175" x2="285" y2="175" stroke="#2a3d57" stroke-width="1.5" marker-end="url(#arr)"/>
+    <line x1="40" y1="175" x2="40"  y2="10"  stroke="#2a3d57" stroke-width="1.5" marker-end="url(#arr)"/>
+    ${svgText(162,205,'Quantity','#7a90aa',9,'middle')}
+    ${svgText(15,93,'Price ($)','#7a90aa',9,'middle',false,'rotate(-90,15,93)')}
+    ${svgLine(40,175,260,20,'#34d399',2)}
+    ${svgText(264,18,'S','#34d399',9,'start',true)}
+    ${svgLine(40,20,260,175,'#f97316',2)}
+    ${svgText(264,177,'D','#f97316',9,'start',true)}
+    ${svgCircle(qx(50),py(50),4,'#60a5fa')}
+    ${extra||''}`;
+}
+
+// ── Draw Q1 (above-eq, surplus) ───────────────────────────────────────────────
+function drawQ1(price){
+  const Qd=100-price, Qs=price;
+  const yP=py(price), xd=qx(Qd), xs=qx(Qs);
+  document.getElementById('q1-svg').innerHTML = baseChart(`
+    ${svgLine(40,yP,260,yP,'#fbbf24',1.2,'5,3')}
+    ${svgText(35,yP+3,''+price,'#fbbf24',8.5,'end')}
+    ${svgLine(xd,175,xd,yP,'#f97316',1.2,'4,3')}
+    ${svgLine(xs,175,xs,yP,'#34d399',1.2,'4,3')}
+    ${svgText(xd,190,'Qd='+Qd,'#f97316',8,'middle')}
+    ${svgText(xs,190,'Qs='+Qs,'#34d399',8,'middle')}
+    ${svgText((xd+xs)/2,202,'← Surplus? →','#fbbf24',8,'middle',true)}`);
+}
+
+// ── Draw Q2 (any price — shortage/surplus/eq) ─────────────────────────────────
+function drawQ2(price){
+  const Qd=100-price, Qs=price;
+  const yP=py(price), xd=qx(Qd), xs=qx(Qs);
+  const lx=Math.min(xd,xs), rx=Math.max(xd,xs);
+  const isEq=(Qd===Qs);
+  const label = isEq ? '' : (Qd>Qs ? '← Shortage? →' : '← Surplus? →');
+  document.getElementById('q2-svg').innerHTML = baseChart(`
+    ${svgLine(40,yP,260,yP,'#fbbf24',1.2,'5,3')}
+    ${svgText(35,yP+3,''+price,'#fbbf24',8.5,'end')}
+    ${svgLine(xs,175,xs,yP,'#34d399',1.2,'4,3')}
+    ${svgLine(xd,175,xd,yP,'#f97316',1.2,'4,3')}
+    ${svgText(xs,190,'Qs='+Qs,'#34d399',8,'middle')}
+    ${svgText(xd,190,'Qd='+Qd,'#f97316',8,'middle')}
+    ${label ? svgText((lx+rx)/2,202,label,'#fbbf24',8,'middle',true) : ''}`);
+}
+
+// ── Axis tick marks (for Q4) ──────────────────────────────────────────────────
+function axisTicks(){
+  let s='';
+  [10,20,30,40,50,60,70,80,90].forEach(p=>{
+    const y=py(p);
+    s+=`<line x1="37" y1="${f(y)}" x2="43" y2="${f(y)}" stroke="#2a3d57" stroke-width="1"/>`;
+    s+=svgText(33,y+3,''+p,'#7a90aa',7,'end');
+  });
+  [10,20,30,40,50,60,70,80,90].forEach(q=>{
+    const x=qx(q);
+    s+=`<line x1="${f(x)}" y1="172" x2="${f(x)}" y2="178" stroke="#2a3d57" stroke-width="1"/>`;
+    s+=svgText(x,187,''+q,'#7a90aa',7,'middle');
+  });
+  return s;
+}
+
+// ── Draw Q3 (price ceiling or floor, binding or not) ──────────────────────────
+function drawQ3(scenario){
+  const {type,price,traded}=scenario;
+  const xT=qx(traded), yP=py(price), xEq=qx(50), yEq=py(50);
+  const isCeil=type==='ceiling'||type==='ceiling-nb';
+  const isNB=type==='ceiling-nb'||type==='floor-nb';
+  const col=isCeil?'#ef4444':'#f97316';
+  const labelText=isCeil?'Price Ceiling':'Price Floor';
+  const Qd=100-price, Qs=price;
+  const xDemInt=qx(Qd), xSupInt=qx(Qs);
+
+  let extra='';
+  // Price line + label
+  extra+=svgLine(40,yP,260,yP,col,1.5,'6,3');
+  extra+=svgText(35,yP+3,''+price,col,8,'end');
+  extra+=svgText(170,yP-7,labelText,col,7.5,'middle');
+  // Equilibrium horizontal ref + vertical drop
+  extra+=svgLine(40,yEq,xEq,yEq,'#60a5fa',1,'3,3');
+  extra+=svgText(35,yEq+3,'50','#60a5fa',8,'end');
+  extra+=svgLine(xEq,175,xEq,yEq,'#60a5fa',1,'3,3');
+  extra+=svgText(xEq,190,'Q=50','#60a5fa',8,'middle');
+
+  if(isNB){
+    // Non-binding: show gray drop lines at both intersections with the price line
+    const xLeft=Math.min(xDemInt,xSupInt);
+    const xRight=Math.max(xDemInt,xSupInt);
+    const qLeft=Math.min(Qd,Qs);
+    const qRight=Math.max(Qd,Qs);
+    extra+=svgLine(xLeft,yP,xLeft,175,'#7a90aa',1,'4,3');
+    extra+=svgLine(xRight,yP,xRight,175,'#7a90aa',1,'4,3');
+    extra+=svgText(xLeft,190,'Q='+qLeft,'#7a90aa',8,'middle');
+    extra+=svgText(xRight,190,'Q='+qRight,'#7a90aa',8,'middle');
+  } else {
+    // Binding: two colored lines at traded qty showing the gap, plus gray drop on the other side
+    extra+=svgLine(xT,175,xT,py(isCeil?price:100-price),'#34d399',1,'4,3');
+    extra+=svgLine(xT,175,xT,py(isCeil?100-price:price),'#f97316',1,'4,3');
+    extra+=svgText(xT,190,'Q='+traded,'#7a90aa',8,'middle');
+    // Gray drop line at the other (non-traded) intersection
+    const xOther=isCeil?xDemInt:xSupInt;
+    const qOther=isCeil?Qd:Qs;
+    extra+=svgLine(xOther,yP,xOther,175,'#7a90aa',1,'4,3');
+    extra+=svgText(xOther,190,'Q='+qOther,'#7a90aa',8,'middle');
+  }
+
+  document.getElementById('q3-svg').innerHTML = baseChart(extra);
+}
+
+// ── Draw Q4 (axis ticks + price line + drop lines + dots at all intersections) ──
+function drawQ4(scenario){
+  const {type,price,traded}=scenario;
+  const isNB=type==='ceiling-nb'||type==='floor-nb';
+
+  // Price line y-coord
+  const yP=py(price);
+  // Where price line crosses supply (P=Q → Q=price) and demand (P=100-Q → Q=100-price)
+  const xSupplyInt=qx(price);       // supply at price
+  const xDemandInt=qx(100-price);   // demand at price
+  const xEq=qx(50), yEq=py(50);
+
+  // The 3 real DWL triangle points:
+  // A = supply curve at Q=traded
+  // B = demand curve at Q=traded
+  // C = equilibrium
+  const real=[
+    {x:qx(traded), y:py(traded)},       // supply at Q=traded
+    {x:qx(traded), y:py(100-traded)},   // demand at Q=traded
+    {x:qx(50),     y:py(50)}            // equilibrium
+  ];
+
+  const allDecoys=[
+    {x:qx(10), y:py(10)},
+    {x:qx(80), y:py(80)},
+    {x:qx(10), y:py(90)},
+    {x:qx(80), y:py(20)},
+    {x:qx(65), y:py(35)},
+    {x:qx(20), y:py(80)},
+  ].filter(d=>!real.some(r=>Math.abs(r.x-d.x)<10&&Math.abs(r.y-d.y)<10));
+  shuffleArr(allDecoys);
+  const allPts=[...real,...allDecoys.slice(0,3)];
+
+  const letters=['A','B','C','D','E','F'];
+  const idx=[0,1,2,3,4,5];
+  for(let i=5;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}
+  const ptByLetter={};
+  letters.forEach((l,i)=>{ptByLetter[l]=allPts[idx[i]];});
+
+  const realLetters=letters.filter(l=>idx[letters.indexOf(l)]<3);
+  realLetters.sort();
+  q4CorrectCombo=realLetters.join('–');
+
+  const wrongCombos=buildWrongCombos(letters,realLetters);
+  const allOptions=[q4CorrectCombo,...wrongCombos.slice(0,3)];
+  shuffleArr(allOptions);
+  q4AllOptions=allOptions;
+
+  const mcEl=document.getElementById('q4-mc');
+  const mcB=['A','B','C','D'];
+  mcEl.innerHTML=allOptions.map((opt,i)=>
+    `<div class="mc-option" onclick="selectMC('q4-mc',this,'${opt}')">
+       <span class="mc-badge">${mcB[i]}</span>
+       <span>Triangle ${opt}</span>
+     </div>`).join('');
+
+  // --- Build the reference lines + intersection dots ---
+  // Horizontal dotted price line across the chart
+  // Vertical gray drop lines from where price meets supply and demand down to x-axis
+  const isCeilType=type==='ceiling'||type==='ceiling-nb';
+  const col=isCeilType?'#ef4444':'#f97316';
+
+  let refSVG='';
+  // Dotted price line
+  refSVG+=svgLine(40,yP,260,yP,col,1.2,'5,3');
+  // Dot + label where price meets y-axis
+  refSVG+=svgCircle(40,yP,3,'#7a90aa');
+
+  if(!isNB){
+    // Gray drop line from supply intersection down to x-axis
+    refSVG+=svgLine(xSupplyInt,yP,xSupplyInt,175,'#7a90aa',1,'4,3');
+    // Gray drop line from demand intersection down to x-axis
+    refSVG+=svgLine(xDemandInt,yP,xDemandInt,175,'#7a90aa',1,'4,3');
+    // Dots at supply curve intersection with price line
+    refSVG+=svgCircle(xSupplyInt,yP,3,'#7a90aa');
+    // Dots at demand curve intersection with price line
+    refSVG+=svgCircle(xDemandInt,yP,3,'#7a90aa');
+    // Dots where drop lines meet x-axis
+    refSVG+=svgCircle(xSupplyInt,175,3,'#7a90aa');
+    refSVG+=svgCircle(xDemandInt,175,3,'#7a90aa');
+  }
+
+  // Labeled dots (A–F)
+  let dotsSVG='';
+  letters.forEach(l=>{
+    const pt=ptByLetter[l];
+    dotsSVG+=svgCircle(pt.x,pt.y,5,'#fbbf24','#172030',1.5);
+    const offX=pt.x>210?-14:8;
+    const offY=pt.y<40?14:(pt.y>160?-10:-5);
+    dotsSVG+=svgText(pt.x+offX,pt.y+offY,l,'#fbbf24',11,'start',true);
+  });
+
+  document.getElementById('q4-svg').innerHTML=baseChart(axisTicks()+refSVG+dotsSVG);
+
+  const policyLabel=isCeilType?'price ceiling':'price floor';
+  document.getElementById('q4-text').innerHTML=isNB
+    ? `The ${policyLabel} at $${price} is non-binding — the market still trades at equilibrium (50 units). Six points (<strong>A–F</strong>) are marked on the graph. Which three points form the <strong>Deadweight Loss triangle</strong>? (Hint: there is none!)`
+    : `With the ${policyLabel} at $${price}, trade falls to ${traded} units. Six points (<strong>A–F</strong>) are marked on the graph. Which three points form the <strong>Deadweight Loss triangle</strong>?`;
+}
+
+function buildWrongCombos(letters, realLetters){
+  const n=letters.length;
+  const all=[];
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) for(let k=j+1;k<n;k++){
+    const combo=[letters[i],letters[j],letters[k]].join('–');
+    if(combo!==realLetters.join('–')) all.push(combo);
+  }
+  shuffleArr(all);
+  return all;
+}
+
+function shuffleArr(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+}
+
+// ── Draw Q5 (DWL triangle with labeled A/B/C + dimension annotations) ────────
+function drawQ5(scenario){
+  const {traded}=scenario;
+  const Ax=qx(traded), Ay=py(traded);
+  const Bx=qx(traded), By=py(100-traded);
+  const Cx=qx(50),     Cy=py(50);
+  const base=(100-traded)-traded;
+  const height=50-traded;
+  const extra=`
+    <polygon points="${f(Ax)},${f(Ay)} ${f(Bx)},${f(By)} ${f(Cx)},${f(Cy)}" fill="rgba(251,191,36,0.18)" stroke="#fbbf24" stroke-width="1.8"/>
+    ${svgLine(40,Ay,Ax,Ay,'#34d399',1.2,'4,3')}
+    ${svgText(35,Ay+3,''+traded,'#34d399',8,'end')}
+    ${svgLine(40,By,Bx,By,'#f97316',1,'4,3')}
+    ${svgText(35,By+3,''+(100-traded),'#f97316',8,'end')}
+    ${svgLine(40,Cy,Cx,Cy,'#60a5fa',1,'3,3')}
+    ${svgText(35,Cy+3,'50','#60a5fa',8,'end')}
+    ${svgLine(qx(traded),175,qx(traded),By,'#7a90aa',1,'3,3')}
+    ${svgLine(qx(50),175,qx(50),Cy,'#60a5fa',1,'3,3')}
+    ${svgText(qx(traded),190,'Q='+traded,'#7a90aa',8,'middle')}
+    ${svgText(qx(50),190,'Q=50','#60a5fa',8,'middle')}
+    ${svgCircle(Ax,Ay,5,'#fbbf24','#172030',1.5)}
+    ${svgText(Ax+7,Ay+4,'A','#fbbf24',11,'start',true)}
+    ${svgCircle(Bx,By,5,'#fbbf24','#172030',1.5)}
+    ${svgText(Bx+7,By-3,'B','#fbbf24',11,'start',true)}
+    ${svgCircle(Cx,Cy,5,'#fbbf24','#172030',1.5)}
+    ${svgText(Cx+7,Cy-3,'C','#fbbf24',11,'start',true)}
+    <line x1="${f(Ax-9)}" y1="${f(Ay)}" x2="${f(Ax-9)}" y2="${f(By)}" stroke="#fbbf24" stroke-width="1"/>
+    <line x1="${f(Ax-13)}" y1="${f(Ay)}" x2="${f(Ax-5)}" y2="${f(Ay)}" stroke="#fbbf24" stroke-width="1"/>
+    <line x1="${f(Ax-13)}" y1="${f(By)}" x2="${f(Ax-5)}" y2="${f(By)}" stroke="#fbbf24" stroke-width="1"/>
+    ${svgText(Ax-11,(Ay+By)/2+3,'$'+base,'#fbbf24',7,'end')}
+    <line x1="${f(Ax)}" y1="${f(Ay+9)}" x2="${f(Cx)}" y2="${f(Ay+9)}" stroke="#fbbf24" stroke-width="1"/>
+    <line x1="${f(Ax)}" y1="${f(Ay+5)}" x2="${f(Ax)}" y2="${f(Ay+13)}" stroke="#fbbf24" stroke-width="1"/>
+    <line x1="${f(Cx)}" y1="${f(Ay+5)}" x2="${f(Cx)}" y2="${f(Ay+13)}" stroke="#fbbf24" stroke-width="1"/>
+    ${svgText((Ax+Cx)/2,Ay+20,''+height+' units','#fbbf24',7,'middle')}`;
+  document.getElementById('q5-svg').innerHTML=baseChart(extra);
+}
+
+// ── Text updaters ─────────────────────────────────────────────────────────────
+function updateQ1Text(){
+  document.getElementById('q1-text').innerHTML =
+    `At a price of <strong style="color:var(--demand)">$${q1Price}</strong>, what is Q<sub>d</sub>, Q<sub>s</sub>, and the size of the surplus?`;
+}
+function updateQ2Text(){
+  const Qd=100-q2Price, Qs=q2Price;
+  const isEq=Qd===Qs;
+  const color = isEq ? 'var(--eq)' : (Qd>Qs ? 'var(--supply)' : 'var(--demand)');
+  document.getElementById('q2-text').innerHTML =
+    `At a price of <strong style="color:${color}">$${q2Price}</strong>, what is Q<sub>d</sub>, Q<sub>s</sub>, the size of the shortage or surplus, and the market condition?`;
+}
+function updateQ3Text(){
+  const {type,price,traded}=q3Scenario;
+  const isCeil=type==='ceiling'||type==='ceiling-nb';
+  const isNB=type==='ceiling-nb'||type==='floor-nb';
+  const col=isCeil?'var(--wrong)':'var(--demand)';
+  const policyLabel=isCeil?'price ceiling':'price floor';
+  const Qd=100-price, Qs=price;
+  document.getElementById('q3-text').innerHTML=
+    `The government sets a <strong style="color:${col}">${policyLabel} at $${price}</strong>. What is the actual quantity traded in this market?`;
+  if(isNB){
+    document.getElementById('q3-hint').innerHTML=
+      `💡 A ${policyLabel} is a <em>${isCeil?'maximum':'minimum'}</em> legal price. The equilibrium price is $50.<br><br>
+       Since $${price} is <em>${isCeil?'above':'below'}</em> the $50 equilibrium, this ${policyLabel} is <strong>non-binding</strong> — it has no effect on the market. Trade continues at the equilibrium quantity of <strong>50</strong>.`;
+  } else {
+    document.getElementById('q3-hint').innerHTML=
+      `💡 A ${policyLabel} is a <em>${isCeil?'maximum':'minimum'}</em> legal price. Plug it into each equation:<br><br>
+       <strong>Demand:</strong> P = 100 − Q<sub>d</sub> → ${price} = 100 − Q<sub>d</sub> → Q<sub>d</sub> = <strong>${Qd}</strong><br>
+       <strong>Supply:</strong> P = Q<sub>s</sub> → Q<sub>s</sub> = <strong>${Qs}</strong><br><br>
+       The actual quantity traded is always the <em>smaller</em> of the two: min(${Qd}, ${Qs}) = <strong>${traded}</strong>.`;
+  }
+}
+function updateQ5Text(){
+  const {type,price,traded}=q3Scenario;
+  const isCeilType=type==='ceiling'||type==='ceiling-nb';
+  const isNB=type==='ceiling-nb'||type==='floor-nb';
+  const policyLabel=isCeilType?'price ceiling':'price floor';
+  const base=(100-traded)-traded, height=50-traded;
+  document.getElementById('q5-text').innerHTML=
+    `Calculate the area of the Deadweight Loss triangle (A–B–C) for the $${price} ${policyLabel}.`;
+  if(isNB){
+    document.getElementById('q5-hint').innerHTML=
+      `💡 The $${price} ${policyLabel} is non-binding — the market is at equilibrium. There is <strong>no deadweight loss</strong>. DWL = <strong>0</strong>.`;
+  } else {
+    document.getElementById('q5-hint').innerHTML=
+      `💡 Area = ½ × base × height<br>
+       <strong>Base (A to B)</strong> = price gap at Q=${traded}: $${100-traded} − $${traded} = <strong>$${base}</strong><br>
+       <strong>Height (A/B across to C)</strong> = quantity gap: 50 − ${traded} = <strong>${height} units</strong>`;
+  }
+}
+
+// ── MC helpers ─────────────────────────────────────────────────────────────────
+function selectMC(groupId,el,value){
+  if(el.classList.contains('disabled')) return;
+  document.querySelectorAll('#'+groupId+' .mc-option').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById(groupId).dataset.selected=value;
+}
+function getMCSelected(groupId){ return document.getElementById(groupId).dataset.selected||null; }
+function lockMC(groupId){ document.querySelectorAll('#'+groupId+' .mc-option').forEach(o=>o.classList.add('disabled')); }
+function markMCCorrect(groupId,correctVal){
+  document.querySelectorAll('#'+groupId+' .mc-option').forEach(o=>{
+    // match on data attribute set by selectMC, or on the text content for dynamic options
+    const optVal = o.getAttribute('onclick').match(/'([^']+)'\)$/)?.[1];
+    if(optVal===correctVal) o.classList.add('correct');
+    else if(o.classList.contains('selected')) o.classList.add('wrong');
+  });
+}
+
+// ── Feedback helpers ──────────────────────────────────────────────────────────
+function showFeedback(id,ok,html){
+  const el=document.getElementById(id);
+  el.className='feedback show '+(ok?'correct':'wrong');
+  el.innerHTML=(ok?'✅ <strong>Correct!</strong> ':'❌ <strong>Not quite.</strong> ')+html;
+}
+function showNext(id){ document.getElementById(id).classList.add('show'); }
+function showRetry(id){ document.getElementById(id).classList.add('show'); }
+function lockInputs(ids){ ids.forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;}); }
+function updateProgress(n){
+  document.getElementById('prog-text').textContent='Question '+n+' of 5';
+  document.getElementById('prog-score').textContent='Score: '+score;
+  document.getElementById('progress-fill').style.width=((n-1)/5*100)+'%';
+}
+function resetCard(qNum){
+  document.querySelectorAll('#q'+qNum+' input[type=number]').forEach(i=>{
+    i.value=''; i.disabled=false; i.classList.remove('correct','wrong');
+  });
+  document.querySelectorAll('#q'+qNum+' .mc-option').forEach(o=>{
+    o.classList.remove('selected','correct','wrong','disabled');
+  });
+  const mc=document.querySelector('#q'+qNum+' .mc-options');
+  if(mc) delete mc.dataset.selected;
+  document.querySelectorAll('#q'+qNum+' .feedback').forEach(f=>f.className='feedback');
+  document.querySelectorAll('#q'+qNum+' .btn-next,#q'+qNum+' .btn-retry').forEach(b=>b.classList.remove('show'));
+  const sub=document.querySelector('#q'+qNum+' .btn-submit');
+  if(sub) sub.disabled=false;
+}
+
+// ── Q1 ────────────────────────────────────────────────────────────────────────
+function checkQ1(){
+  const Qd=100-q1Price, Qs=q1Price, surplus=Qs-Qd;
+  const qdV=parseInt(document.getElementById('q1-qd').value);
+  const qsV=parseInt(document.getElementById('q1-qs').value);
+  const surpV=parseInt(document.getElementById('q1-surp').value);
+  const qdOk=qdV===Qd, qsOk=qsV===Qs, surpOk=surpV===surplus, allOk=qdOk&&qsOk&&surpOk;
+  document.getElementById('q1-qd').classList.add(qdOk?'correct':'wrong');
+  document.getElementById('q1-qs').classList.add(qsOk?'correct':'wrong');
+  document.getElementById('q1-surp').classList.add(surpOk?'correct':'wrong');
+  lockInputs(['q1-qd','q1-qs','q1-surp']);
+  document.getElementById('q1-submit').disabled=true;
+  if(allOk){ score++; results[0]=true; qStats[0][0]++;
+    showFeedback('q1-fb',true,`At P=$${q1Price}, buyers want ${Qd} units (100−${q1Price}) but sellers want to sell ${Qs}. That leaves <strong>${surplus} unsold units</strong> — a surplus.`);
+  } else { qStats[0][1]++;
+    showFeedback('q1-fb',false,`Q<sub>d</sub> = 100 − ${q1Price} = <strong>${Qd}</strong>. Q<sub>s</sub> = <strong>${Qs}</strong>. Surplus = ${Qs} − ${Qd} = <strong>${surplus}</strong>.`);
+  }
+  updateProgress(1); showNext('q1-next'); showRetry('q1-retry');
+}
+function retryQ1(){
+  const opts=Q1_PRICES.filter(p=>p!==q1Price);
+  q1Price=opts[Math.floor(Math.random()*opts.length)];
+  resetCard(1); drawQ1(q1Price); updateQ1Text();
+}
+
+// ── Q2 ────────────────────────────────────────────────────────────────────────
+function checkQ2(){
+  const Qd=100-q2Price, Qs=q2Price;
+  const isEq=Qd===Qs, isShortage=Qd>Qs;
+  const gap=Math.abs(Qd-Qs);
+  const correctMC = isEq ? 'eq' : (isShortage ? 'shortage' : 'surplus');
+  const correctBadge = isEq ? 'C' : (isShortage ? 'B' : 'A');
+  const qdV=parseInt(document.getElementById('q2-qd').value);
+  const qsV=parseInt(document.getElementById('q2-qs').value);
+  const gapV=parseInt(document.getElementById('q2-gap').value);
+  const mc=getMCSelected('q2-mc');
+  const qdOk=qdV===Qd, qsOk=qsV===Qs, gapOk=gapV===gap, mcOk=mc===correctMC, allOk=qdOk&&qsOk&&gapOk&&mcOk;
+  document.getElementById('q2-qd').classList.add(qdOk?'correct':'wrong');
+  document.getElementById('q2-qs').classList.add(qsOk?'correct':'wrong');
+  document.getElementById('q2-gap').classList.add(gapOk?'correct':'wrong');
+  lockInputs(['q2-qd','q2-qs','q2-gap']);
+  lockMC('q2-mc');
+  markMCCorrect('q2-mc', correctMC);
+  document.getElementById('q2-submit').disabled=true;
+  const condWord = isEq ? 'equilibrium (market clears perfectly)' : (isShortage ? 'shortage' : 'surplus');
+  if(allOk){ score++; results[1]=true; qStats[1][0]++;
+    showFeedback('q2-fb',true,`At P=$${q2Price}: Qd=${Qd}, Qs=${Qs}. Gap = <strong>${gap}</strong> — <strong>${condWord}</strong>.`);
+  } else { qStats[1][1]++;
+    showFeedback('q2-fb',false,`Q<sub>d</sub> = 100−${q2Price} = <strong>${Qd}</strong>; Q<sub>s</sub> = <strong>${Qs}</strong>. Gap = <strong>${gap}</strong>. Since $${q2Price} is ${isEq?'exactly at':'${isShortage?"below":"above"} the'} $50 equilibrium, this is a <strong>${condWord}</strong>.`
+      .replace('${isShortage?"below":"above"}', isShortage?'below':'above'));
+  }
+  updateProgress(2); showNext('q2-next'); showRetry('q2-retry');
+}
+function retryQ2(){
+  const opts=Q2_POOL.filter(p=>p!==q2Price);
+  q2Price=opts[Math.floor(Math.random()*opts.length)];
+  resetCard(2); drawQ2(q2Price); updateQ2Text();
+}
+
+// ── Q3 ────────────────────────────────────────────────────────────────────────
+function buildQ3MC(scenario){
+  const {price,traded}=scenario;
+  const Qs=price, Qd=100-price;
+  const lower=Math.min(Qs,Qd);
+  const higher=Math.max(Qs,Qd);
+  const opts=[lower,50,higher];
+  const badges=['A','B','C'];
+  document.getElementById('q3-mc').innerHTML=opts.map((v,i)=>
+    `<div class="mc-option" onclick="selectMC('q3-mc',this,'${v}')">
+       <span class="mc-badge">${badges[i]}</span>
+       <span>Q = ${v} units${v===50?' (equilibrium)':''}</span>
+     </div>`).join('');
+}
+
+function checkQ3(){
+  const {type,price,traded}=q3Scenario;
+  const Qd=100-price, Qs=price;
+  const sel=getMCSelected('q3-mc');
+  if(!sel) return;
+  const ans=parseInt(sel);
+  lockMC('q3-mc');
+  markMCCorrect('q3-mc', traded.toString());
+  document.getElementById('q3-submit').disabled=true;
+  const isCeilType=type==='ceiling'||type==='ceiling-nb';
+  const isNBType=type==='ceiling-nb'||type==='floor-nb';
+  if(ans===traded){ score++; results[2]=true; qStats[2][0]++;
+    let msg;
+    if(isNBType){
+      msg=`The ${isCeilType?'ceiling':'floor'} at $${price} is ${isCeilType?'above':'below'} the $50 equilibrium — it's non-binding. The market trades at the equilibrium quantity: <strong>${traded}</strong>.`;
+    } else if(isCeilType){
+      msg=`Buyers want ${Qd} units but suppliers only produce ${Qs}. Traded = the smaller = <strong>${traded}</strong>.`;
+    } else {
+      msg=`Buyers only want ${Qd} units but sellers offer ${Qs}. Traded = the smaller = <strong>${traded}</strong>.`;
+    }
+    showFeedback('q3-fb',true,msg);
+  } else { qStats[2][1]++;
+    if(isNBType){
+      showFeedback('q3-fb',false,`The ${isCeilType?'ceiling':'floor'} at $${price} is ${isCeilType?'above':'below'} the $50 equilibrium — non-binding. Traded = equilibrium = <strong>${traded}</strong>.`);
+    } else {
+      showFeedback('q3-fb',false,`Q<sub>s</sub>=${Qs}, Q<sub>d</sub>=${Qd}. Traded = the smaller = <strong>${traded}</strong>.`);
+    }
+  }
+  updateProgress(3); showNext('q3-next'); showRetry('q3-retry');
+}
+function retryQ3(){
+  const opts=Q3_SCENARIOS.filter(s=>s.price!==q3Scenario.price);
+  q3Scenario=opts[Math.floor(Math.random()*opts.length)];
+  resetCard(3); drawQ3(q3Scenario); updateQ3Text(); buildQ3MC(q3Scenario);
+  drawQ4(q3Scenario); drawQ5(q3Scenario); updateQ5Text();
+}
+
+// ── Q4 ────────────────────────────────────────────────────────────────────────
+function checkQ4(){
+  const mc=getMCSelected('q4-mc');
+  lockMC('q4-mc');
+  markMCCorrect('q4-mc', q4CorrectCombo);
+  document.getElementById('q4-submit').disabled=true;
+  const ok=mc===q4CorrectCombo;
+  if(ok){ score++; results[3]=true; qStats[3][0]++; } else { qStats[3][1]++; }
+  const {traded}=q3Scenario;
+  showFeedback('q4-fb',ok,`Triangle <strong>${q4CorrectCombo}</strong> is the DWL. Those three points are: the supply curve at Q=${traded} (P=$${traded}), the demand curve at Q=${traded} (P=$${100-traded}), and the equilibrium (Q=50, P=$50). The other points are decoys.`);
+  updateProgress(4); showNext('q4-next'); showRetry('q4-retry');
+}
+function retryQ4(){
+  const opts=Q3_SCENARIOS.filter(s=>s.price!==q3Scenario.price);
+  q3Scenario=opts[Math.floor(Math.random()*opts.length)];
+  resetCard(4); drawQ4(q3Scenario);
+  drawQ3(q3Scenario); buildQ3MC(q3Scenario); drawQ5(q3Scenario); updateQ3Text(); updateQ5Text();
+}
+
+// ── Q5 ────────────────────────────────────────────────────────────────────────
+function checkQ5(){
+  const {traded}=q3Scenario;
+  const base=(100-traded)-traded, height=50-traded;
+  const dwl=Math.round(0.5*base*height);
+  const ans=parseInt(document.getElementById('q5-ans').value);
+  lockInputs(['q5-ans']);
+  document.getElementById('q5-submit').disabled=true;
+  if(ans===dwl){ score++; results[4]=true; qStats[4][0]++;
+    document.getElementById('q5-ans').classList.add('correct');
+    showFeedback('q5-fb',true,`½ × ${base} × ${height} = <strong>${dwl}</strong>.`);
+  } else { qStats[4][1]++;
+    document.getElementById('q5-ans').classList.add('wrong');
+    showFeedback('q5-fb',false,`Area = ½ × ${base} × ${height} = <strong>${dwl}</strong>. Base = $${100-traded}−$${traded}=$${base}; height = 50−${traded}=${height}.`);
+  }
+  updateProgress(5); showNext('q5-next'); showRetry('q5-retry');
+}
+function retryQ5(){
+  const opts=Q3_SCENARIOS.filter(s=>s.price!==q3Scenario.price);
+  q3Scenario=opts[Math.floor(Math.random()*opts.length)];
+  resetCard(5); drawQ5(q3Scenario); updateQ5Text();
+  drawQ3(q3Scenario); buildQ3MC(q3Scenario); drawQ4(q3Scenario); updateQ3Text();
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function nextQ(num){
+  document.querySelectorAll('.q-card').forEach(c=>c.style.display='none');
+  const next=document.getElementById('q'+num);
+  if(next){ next.style.display='block'; next.scrollIntoView({behavior:'smooth',block:'start'}); updateProgress(num); }
+}
+function showScore(){
+  document.querySelectorAll('.q-card').forEach(c=>c.style.display='none');
+  document.getElementById('progress-fill').style.width='100%';
+  document.getElementById('prog-text').textContent='Complete!';
+  document.getElementById('prog-score').textContent='Score: '+score;
+  const scr=document.getElementById('score-screen');
+  scr.classList.add('show');
+  scr.scrollIntoView({behavior:'smooth',block:'start'});
+  const totalAttempts=qStats.reduce((s,[c,w])=>s+c+w,0);
+  const totalCorrect=qStats.reduce((s,[c])=>s+c,0);
+  const pct=totalAttempts>0?totalCorrect/totalAttempts:0;
+  let emoji='📚',title='Keep studying!',sub='Review the model above and give it another go.';
+  if(score===5){emoji='🏆';title='Perfect Score!';sub='Outstanding — you\'ve nailed this model.';}
+  else if(score>=4){emoji='🎓';title='Excellent Work!';sub='Strong understanding — nearly perfect!';}
+  else if(score>=3){emoji='👍';title='Good Effort!';sub='A couple of things to review — you\'re close.';}
+  document.getElementById('score-emoji').textContent=emoji;
+  document.getElementById('score-title').textContent=title;
+  document.getElementById('score-sub').textContent=sub;
+  const {type,price}=q3Scenario;
+  const policyShort=(type==='ceiling'||type==='ceiling-nb')?'Ceiling':'Floor';
+  const labels=['Q1 — Surplus at P=$'+q1Price,'Q2 — Market condition at P=$'+q2Price,'Q3 — '+policyShort+' at $'+price+' quantity','Q4 — DWL location','Q5 — DWL area'];
+  const bd=document.getElementById('score-breakdown');
+  bd.innerHTML='';
+  qStats.forEach(([c,w],i)=>{
+    const total=c+w;
+    const tallyHtml=total===0
+      ? `<span class="score-tally"><span class="tally-yes">—</span></span>`
+      : `<span class="score-tally"><span class="tally-yes">✓ ${c}</span><span class="tally-no">✗ ${w}</span></span>`;
+    bd.innerHTML+=`<div class="score-row"><span class="q-label">${labels[i]}</span>${tallyHtml}</div>`;
+  });
+}
+function restartQuiz(){
+  score=0; results=[false,false,false,false,false];
+  qStats=[[0,0],[0,0],[0,0],[0,0],[0,0]];
+  q1Price=70;
+  q2Price=Q2_POOL[Math.floor(Math.random()*Q2_POOL.length)];
+  q3Scenario=Q3_SCENARIOS[1];
+  document.querySelectorAll('input[type=number]').forEach(i=>{i.value='';i.disabled=false;i.classList.remove('correct','wrong');});
+  document.querySelectorAll('.mc-option').forEach(o=>o.classList.remove('selected','correct','wrong','disabled'));
+  document.querySelectorAll('.mc-options').forEach(g=>delete g.dataset.selected);
+  document.querySelectorAll('.feedback').forEach(f=>f.className='feedback');
+  document.querySelectorAll('.btn-submit').forEach(b=>b.disabled=false);
+  document.querySelectorAll('.btn-next,.btn-retry').forEach(b=>b.classList.remove('show'));
+  document.getElementById('score-screen').classList.remove('show');
+  document.getElementById('prog-score').textContent='Score: 0';
+  document.getElementById('progress-fill').style.width='0%';
+  initAll();
+  document.querySelectorAll('.q-card').forEach(c=>c.style.display='none');
+  document.getElementById('q1').style.display='block';
+  updateProgress(1);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function initAll(){
+  drawQ1(q1Price); updateQ1Text();
+  drawQ2(q2Price); updateQ2Text();
+  drawQ3(q3Scenario); updateQ3Text(); buildQ3MC(q3Scenario);
+  drawQ4(q3Scenario);
+  drawQ5(q3Scenario); updateQ5Text();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+initAll();
+document.getElementById('q1').style.display='block';
+updateProgress(1);
+</script>
+</body>
+</html>
